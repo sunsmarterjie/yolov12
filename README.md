@@ -42,16 +42,16 @@ pip install -e .
 ```
 
 ## Validation
-[`yolov12n`](https://github.com/sunsmarterjie/yolov12/releases/download/turbo/yolov12n.pt)
-[`yolov12s`](https://github.com/sunsmarterjie/yolov12/releases/download/turbo/yolov12s.pt)
-[`yolov12m`](https://github.com/sunsmarterjie/yolov12/releases/download/turbo/yolov12m.pt)
-[`yolov12l`](https://github.com/sunsmarterjie/yolov12/releases/download/turbo/yolov12l.pt)
-[`yolov12x`](https://github.com/sunsmarterjie/yolov12/releases/download/turbo/yolov12x.pt)
+[`yolov12n-seg`](https://github.com/sunsmarterjie/yolov12/releases/download/seg/yolov12n-seg.pt)
+[`yolov12s-seg`](https://github.com/sunsmarterjie/yolov12/releases/download/seg/yolov12s-seg.pt)
+[`yolov12m-seg`](https://github.com/sunsmarterjie/yolov12/releases/download/seg/yolov12m-seg.pt)
+[`yolov12l-seg`](https://github.com/sunsmarterjie/yolov12/releases/download/seg/yolov12l-seg.pt)
+[`yolov12x-seg`](https://github.com/sunsmarterjie/yolov12/releases/download/seg/yolov12x-seg.pt)
 
 ```python
 from ultralytics import YOLO
 
-model = YOLO('yolov12{n/s/m/l/x}.pt')
+model = YOLO('yolov12{n/s/m/l/x}-seg.pt')
 model.val(data='coco.yaml', save_json=True)
 ```
 
@@ -59,13 +59,13 @@ model.val(data='coco.yaml', save_json=True)
 ```python
 from ultralytics import YOLO
 
-model = YOLO('yolov12n.yaml')
+model = YOLO('yolov12n-seg.yaml')
 
 # Train the model
 results = model.train(
   data='coco.yaml',
   epochs=600, 
-  batch=256, 
+  batch=128, 
   imgsz=640,
   scale=0.5,  # S:0.9; M:0.9; L:0.9; X:0.9
   mosaic=1.0,
@@ -87,7 +87,7 @@ results[0].show()
 ```python
 from ultralytics import YOLO
 
-model = YOLO('yolov12{n/s/m/l/x}.pt')
+model = YOLO('yolov12{n/s/m/l/x}-seg.pt')
 model.predict()
 ```
 
@@ -95,7 +95,7 @@ model.predict()
 ```python
 from ultralytics import YOLO
 
-model = YOLO('yolov12{n/s/m/l/x}.pt')
+model = YOLO('yolov12{n/s/m/l/x}-seg.pt')
 model.export(format="engine", half=True)  # or format="onnx"
 ```
 
