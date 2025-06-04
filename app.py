@@ -63,13 +63,13 @@ def app():
                 model_id = gr.Dropdown(
                     label="Model",
                     choices=[
-                        "yolov12n.pt",
-                        "yolov12s.pt",
-                        "yolov12m.pt",
-                        "yolov12l.pt",
-                        "yolov12x.pt",
+                        "yolov12n-seg.pt",
+                        "yolov12s-seg.pt",
+                        "yolov12m-seg.pt",
+                        "yolov12l-seg.pt",
+                        "yolov12x-seg.pt",
                     ],
-                    value="yolov12m.pt",
+                    value="yolov12m-seg.pt",
                 )
                 image_size = gr.Slider(
                     label="Image Size",
@@ -122,13 +122,13 @@ def app():
             examples=[
                 [
                     "ultralytics/assets/bus.jpg",
-                    "yolov12s.pt",
+                    "yolov12s-seg.pt",
                     640,
                     0.25,
                 ],
                 [
                     "ultralytics/assets/zidane.jpg",
-                    "yolov12x.pt",
+                    "yolov12x-seg.pt",
                     640,
                     0.25,
                 ],
