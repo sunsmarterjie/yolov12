@@ -8,6 +8,8 @@
 
 <sup>1</sup>  University at Buffalo, SUNY, <sup>2</sup> University of Chinese Academy of Sciences.
 
+</div>
+
 ## Main Results
 
 [**Instance segmentation**](https://github.com/sunsmarterjie/yolov12/tree/Seg):
