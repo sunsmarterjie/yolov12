@@ -123,13 +123,13 @@ def app():
                 [
                     "ultralytics/assets/bus.jpg",
                     "yolov12s-cls.pt",
-                    640,
+                    224,
                     0.25,
                 ],
                 [
                     "ultralytics/assets/zidane.jpg",
                     "yolov12x-cls.pt",
-                    640,
+                    224,
                     0.25,
                 ],
             ],
