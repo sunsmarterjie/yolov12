@@ -12,15 +12,14 @@
 
 ## Main Results
 
-[**Instance segmentation**](https://github.com/sunsmarterjie/yolov12/tree/Seg):
-| Model                                                                               | size<br><sup>(pixels) | mAP<sup>box<br>50-95 | mAP<sup>mask<br>50-95 | Speed<br><sup>T4 TensorRT10<br> | params<br><sup>(M) | FLOPs<br><sup>(B) |
-| :------------------------------------------------------------------------------------| :--------------------: | :-------------------: | :---------------------: | :--------------------------------:| :------------------: | :-----------------: |
-| [YOLOv12n-seg](https://github.com/sunsmarterjie/yolov12/releases/download/seg/yolov12n-seg.pt) | 640                   | 39.9                 | 32.8                  | 1.84                           | 2.8                | 9.9              |
-| [YOLOv12s-seg](https://github.com/sunsmarterjie/yolov12/releases/download/seg/yolov12s-seg.pt) | 640                   | 47.5                 | 38.6                  | 2.84                           | 9.8                | 33.4              |
-| [YOLOv12m-seg](https://github.com/sunsmarterjie/yolov12/releases/download/seg/yolov12m-seg.pt) | 640                   | 52.4                 | 42.3                  | 6.27                           | 21.9               | 115.1             |
-| [YOLOv12l-seg](https://github.com/sunsmarterjie/yolov12/releases/download/seg/yolov12l-seg.pt) | 640                   | 54.0                 | 43.2                  | 7.61                          | 28.8               | 137.7             |
-| [YOLOv12x-seg](https://github.com/sunsmarterjie/yolov12/releases/download/seg/yolov12x-seg.pt) | 640                   | 55.2                 | 44.2                  | 15.43                          | 64.5               | 308.7             |
-
+[**Classification**](https://github.com/sunsmarterjie/yolov12/tree/Cls):
+| Model (cls)                                                                              | size<br><sup>(pixels) | Acc.<br><sup>top-1<br> | Acc.<br><sup>top-5<br> | Speed  (ms) <br><sup>T4 TensorRT10<br> | params<br><sup>(M) | FLOPs<br><sup>(B) |
+| :----------------------------------------------------------------------------------------| :-------------------: | :------------: | :------------: | :-------------------------------------:| :----------------: | :---------------: |
+| [YOLOv12n-cls](https://github.com/sunsmarterjie/yolov12/releases/download/cls/yolov12n-cls.pt) | 224             | 71.7           | 90.5           | 1.27                                   | 2.9                | 0.5               |
+| [YOLOv12s-cls](https://github.com/sunsmarterjie/yolov12/releases/download/cls/yolov12s-cls.pt) | 224             | 76.4           | 93.3           | 1.52                                   | 7.2                | 1.5               |
+| [YOLOv12m-cls](https://github.com/sunsmarterjie/yolov12/releases/download/cls/yolov12m-cls.pt) | 224             | 78.8           | 94.4           | 2.03                                   | 12.7               | 4.5               |
+| [YOLOv12l-cls](https://github.com/sunsmarterjie/yolov12/releases/download/cls/yolov12l-cls.pt) | 224             | 79.5           | 94.5           | 2.73                                   | 16.8               | 6.2               |
+| [YOLOv12x-cls](https://github.com/sunsmarterjie/yolov12/releases/download/cls/yolov12x-cls.pt) | 224             | 80.1           | 95.3           | 3.64                                   | 35.5               | 13.7              |
 
 
 ## Installation
@@ -33,16 +32,16 @@ pip install -e .
 ```
 
 ## Validation
-[`yolov12n-seg`](https://github.com/sunsmarterjie/yolov12/releases/download/seg/yolov12n-seg.pt)
-[`yolov12s-seg`](https://github.com/sunsmarterjie/yolov12/releases/download/seg/yolov12s-seg.pt)
-[`yolov12m-seg`](https://github.com/sunsmarterjie/yolov12/releases/download/seg/yolov12m-seg.pt)
-[`yolov12l-seg`](https://github.com/sunsmarterjie/yolov12/releases/download/seg/yolov12l-seg.pt)
-[`yolov12x-seg`](https://github.com/sunsmarterjie/yolov12/releases/download/seg/yolov12x-seg.pt)
+[`yolov12n-cls`](https://github.com/sunsmarterjie/yolov12/releases/download/cls/yolov12n-cls.pt)
+[`yolov12s-cls`](https://github.com/sunsmarterjie/yolov12/releases/download/cls/yolov12s-cls.pt)
+[`yolov12m-cls`](https://github.com/sunsmarterjie/yolov12/releases/download/cls/yolov12m-cls.pt)
+[`yolov12l-cls`](https://github.com/sunsmarterjie/yolov12/releases/download/cls/yolov12l-cls.pt)
+[`yolov12x-cls`](https://github.com/sunsmarterjie/yolov12/releases/download/cls/yolov12x-cls.pt)
 
 ```python
 from ultralytics import YOLO
 
-model = YOLO('yolov12{n/s/m/l/x}-seg.pt')
+model = YOLO('yolov12{n/s/m/l/x}-cls.pt')
 model.val(data='coco.yaml', save_json=True)
 ```
 
@@ -50,7 +49,7 @@ model.val(data='coco.yaml', save_json=True)
 ```python
 from ultralytics import YOLO
 
-model = YOLO('yolov12n-seg.yaml')
+model = YOLO('yolov12n-cls.yaml')
 
 # Train the model
 results = model.train(
@@ -78,7 +77,7 @@ results[0].show()
 ```python
 from ultralytics import YOLO
 
-model = YOLO('yolov12{n/s/m/l/x}-seg.pt')
+model = YOLO('yolov12{n/s/m/l/x}-cls.pt')
 model.predict()
 ```
 
@@ -86,7 +85,7 @@ model.predict()
 ```python
 from ultralytics import YOLO
 
-model = YOLO('yolov12{n/s/m/l/x}-seg.pt')
+model = YOLO('yolov12{n/s/m/l/x}-cls.pt')
 model.export(format="engine", half=True)  # or format="onnx"
 ```
 
