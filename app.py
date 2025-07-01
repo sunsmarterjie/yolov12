@@ -63,20 +63,20 @@ def app():
                 model_id = gr.Dropdown(
                     label="Model",
                     choices=[
-                        "yolov12n.pt",
-                        "yolov12s.pt",
-                        "yolov12m.pt",
-                        "yolov12l.pt",
-                        "yolov12x.pt",
+                        "yolov12n-cls.pt",
+                        "yolov12s-cls.pt",
+                        "yolov12m-cls.pt",
+                        "yolov12l-cls.pt",
+                        "yolov12x-cls.pt",
                     ],
                     value="yolov12m.pt",
                 )
                 image_size = gr.Slider(
                     label="Image Size",
-                    minimum=320,
-                    maximum=1280,
+                    minimum=224,
+                    maximum=224,
                     step=32,
-                    value=640,
+                    value=224,
                 )
                 conf_threshold = gr.Slider(
                     label="Confidence Threshold",
@@ -85,7 +85,7 @@ def app():
                     step=0.05,
                     value=0.25,
                 )
-                yolov12_infer = gr.Button(value="Detect Objects")
+                yolov12_infer = gr.Button(value="Classify")
 
             with gr.Column():
                 output_image = gr.Image(type="numpy", label="Annotated Image", visible=True)
@@ -122,13 +122,13 @@ def app():
             examples=[
                 [
                     "ultralytics/assets/bus.jpg",
-                    "yolov12s.pt",
+                    "yolov12s-cls.pt",
                     640,
                     0.25,
                 ],
                 [
                     "ultralytics/assets/zidane.jpg",
-                    "yolov12x.pt",
+                    "yolov12x-cls.pt",
                     640,
                     0.25,
                 ],
