@@ -10,7 +10,7 @@
 
 </div>
 
-## Main Results
+## Main Results (ImageNet-1K)
 
 [**Classification**](https://github.com/sunsmarterjie/yolov12/tree/Cls):
 | Model (cls)                                                                              | size<br><sup>(pixels) | Acc.<br><sup>top-1<br> | Acc.<br><sup>top-5<br> | Speed  (ms) <br><sup>T4 TensorRT10<br> | params<br><sup>(M) | FLOPs<br><sup>(B) |
