@@ -1035,7 +1035,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
                 legacy = False
                 if scale in "lx":  # for L/X sizes
                     args.append(1.5)
-                if scale in "nsmlx":  # for L/X sizes
+                if scale in "nsmlx":  # for all sizes
                     args.append(True)
         elif m is AIFI:
             args = [ch[f], *args]
