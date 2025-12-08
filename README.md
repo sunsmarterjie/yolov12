@@ -192,10 +192,61 @@ yolov12_SmallData/
 
 ---
 
-# 📝 TEMPLATE BLOCK — TO BE COMPLETED LATER  
-### ❗ DO NOT MERGE INTO MAIN UNTIL THIS SECTION IS FILLED
+## ⬜ TEMPLATE: Reproducing Official YOLO Results
 
-**THE FOLLOWING SECTION IS A TEMPLATE.**
+**Goal:** Show that our training pipeline reproduces the original YOLOv12 results closely enough (within a few percentage points), and only then move on to small-data experiments.
+
+Tasks for this section:
+
+1. **Compare our full-data runs to the official YOLOv12 results.**  
+   - For each model size (n, s, m, l, x), collect:  
+     - our best mAP50-95 on the full 100% dataset,  
+     - the corresponding official mAP from the YOLOv12 paper or repository.
+
+2. **Plot per-model comparison curves.**  
+   - Create a figure with 5 subplots in a single row (one subplot per model size).  
+   - For each model, show our training curve vs. the reference curve or reported best point from the authors.  
+   - Visually highlight how close our results are to the official ones.
+
+3. **Create a comparison table.**  
+   - Table with columns: Model, Our best mAP50-95, Official mAP50-95, Absolute difference (Δ), Relative difference (%).  
+   - Expect differences of only a few percentage points.  
+   - Conclude that the reproduction is successful if deviations stay in that small range.
+
+4. **Write a short textual conclusion.**  
+   - Explain that our training reliably reproduces the authors’ performance on the full dataset.  
+   - Based on this, justify moving to small-data experiments.
+
+**THIS ENTIRE SUBSECTION MUST BE WRITTEN BY HAND ONCE OFFICIAL REFERENCE NUMBERS AND OUR FINAL NUMBERS ARE AVAILABLE.**
+
+---
+
+## ⬜ TEMPLATE: Small-Data Results and Interpretation
+
+**Goal:** Describe how performance changes as the amount of training data is reduced and provide hypotheses for why the behavior is not strictly linear.
+
+Tasks for this section:
+
+1. **Describe overall trends.**  
+   - Explain how mAP50-95 changes as we move from 100% → 50% → 20% → 10% → 5% → 2.5% → ...  
+   - Comment that **cutting the dataset size in half does not necessarily halve the performance** — the degradation is slower and model performance remains surprisingly robust even at smaller scales.
+
+2. **Highlight interesting regimes.**  
+   - Identify thresholds where performance drops more sharply (e.g., below 5% or 1.25%).  
+   - Point out which model sizes are more robust to small data (e.g., n/s vs. x).
+
+3. **Hypothesize why performance does not scale linearly with dataset size.**  
+   Possible directions to discuss (to be elaborated by the author):  
+   - redundancy in COCO (many images contain similar objects),  
+   - strong inductive bias in YOLOv12 backbone and head,  
+   - effectiveness of data augmentation on small datasets,  
+   - the role of pre-training or transfer effects (if applicable).
+
+4. **Connect back to research questions.**  
+   - Summarize what the experiments tell us about YOLOv12 on small data.  
+   - Suggest potential future experiments (e.g., different sampling strategies, other backbones, finer-grained sizes).
+
+**FILL THIS SECTION WITH A NARRATIVE EXPLANATION OF THE OBSERVED CURVES AND TABLES.**
 
 ---
 
