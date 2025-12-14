@@ -65,6 +65,9 @@ from ultralytics.nn.modules import (
     WorldDetect,
     v10Detect,
     A2C2f,
+    StandardBranch,
+    DenoisingBranch,
+    AdaptiveFeatureFusion,
 )
 from ultralytics.utils import DEFAULT_CFG_DICT, DEFAULT_CFG_KEYS, LOGGER, colorstr, emojis, yaml_load
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
@@ -1062,6 +1065,14 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             c2 = args[0]
             c1 = ch[f]
             args = [c1, c2, *args[1:]]
+        elif m in {StandardBranch, DenoisingBranch}:
+            # StandardBranch and DenoisingBranch need c1 and c2
+            c1 = ch[f]
+            c2 = args[0]
+            args = [c1, c2, *args[1:]]
+        elif m is AdaptiveFeatureFusion:
+            # AdaptiveFeatureFusion fuses two channels from previous layers
+            c2 = args[0]
         elif m is CBFuse:
             c2 = ch[f[-1]]
         else:

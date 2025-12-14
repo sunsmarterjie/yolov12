@@ -50,6 +50,9 @@ __all__ = (
     "PSA",
     "SCDown",
     "TorchVision",
+    "StandardBranch",
+    "DenoisingBranch",
+    "AdaptiveFeatureFusion",
 )
 
 
@@ -1367,3 +1370,157 @@ class A2C2f(nn.Module):
         if self.gamma is not None:
             return x + self.gamma.view(1, -1, 1, 1) * self.cv2(torch.cat(y, 1))
         return self.cv2(torch.cat(y, 1))
+
+
+class StandardBranch(nn.Module):
+    """
+    Standard Branch for dual-branch feature extraction.
+    Uses 2 regular convolutions for standard feature extraction.
+    
+    Args:
+        c1: Input channels
+        c2: Output channels
+    """
+
+    def __init__(self, c1, c2):
+        """Initialize StandardBranch with 2 regular convolutions."""
+        super().__init__()
+        
+        # First convolution
+        self.conv1 = Conv(c1, c2, 3, 1, 1)
+        
+        # Second convolution
+        self.conv2 = Conv(c2, c2, 3, 1, 1)
+
+    def forward(self, x):
+        """Forward pass through standard branch."""
+        # First Conv
+        x = self.conv1(x)
+        
+        # Second Conv
+        x = self.conv2(x)
+        
+        return x
+
+
+class DenoisingBranch(nn.Module):
+    """
+    Denoising Branch for dual-branch feature extraction.
+    Uses depthwise separable convolutions to reduce noise in features.
+    Runs in parallel with StandardBranch.
+    
+    Args:
+        c1: Input channels
+        c2: Output channels
+        n: Number of bottleneck layers (default 1)
+        shortcut: Use shortcut connections (default False)
+        g: Group convolutions (default 1)
+        e: Expansion ratio (default 0.5)
+    """
+
+    def __init__(self, c1, c2, n=1, shortcut=False, g=1, e=0.5):
+        """Initialize DenoisingBranch with depthwise separable convolutions."""
+        super().__init__()
+        self.c = int(c2 * e)  # hidden channels
+        
+        # Initial convolution to extract features
+        self.cv1 = Conv(c1, 2 * self.c, 1, 1)
+        
+        # Depthwise separable convolutions for noise reduction
+        # First depthwise separable block
+        self.dw_conv1 = Conv(self.c, self.c, 3, 1, p=1, g=self.c)  # depthwise
+        self.pw_conv1 = Conv(self.c, self.c, 1, 1)  # pointwise
+        
+        # Second depthwise separable block
+        self.dw_conv2 = Conv(self.c, self.c, 3, 1, p=1, g=self.c)  # depthwise
+        self.pw_conv2 = Conv(self.c, self.c, 1, 1)  # pointwise
+        
+        # Activation function
+        self.act = nn.GELU()
+        
+        # Bottleneck layers for feature refinement
+        self.m = nn.ModuleList(
+            Bottleneck(self.c, self.c, shortcut, g, k=((3, 3), (3, 3)), e=1.0)
+            for _ in range(n)
+        )
+        
+        # Final convolution
+        self.cv2 = Conv((2 + n) * self.c, c2, 1)
+
+    def forward(self, x):
+        """Forward pass through denoising branch."""
+        # Extract features
+        y = list(self.cv1(x).chunk(2, 1))
+        
+        # Apply depthwise separable convolutions to first part (denoising pathway)
+        # First depthwise separable block
+        denoised = self.dw_conv1(y[0])
+        denoised = self.act(denoised)
+        denoised = self.pw_conv1(denoised)
+        
+        # Second depthwise separable block
+        denoised = self.dw_conv2(denoised)
+        denoised = self.act(denoised)
+        denoised = self.pw_conv2(denoised)
+        
+        y[0] = denoised
+        
+        # Process through bottleneck layers (using the denoised features)
+        y.extend(m(y[-1]) for m in self.m)
+        
+        # Output - concatenate all features
+        # y has: [denoised, y[1], bottleneck_outputs...]
+        # Total: (2 + n) * self.c channels, so cv2 should expect this
+        return self.cv2(torch.cat(y, 1))
+
+
+class AdaptiveFeatureFusion(nn.Module):
+    """
+    Adaptive Feature Fusion module that learns to fuse features from two branches.
+    Uses learnable weights to adaptively combine StandardBranch and DenoisingBranch outputs.
+    
+    Args:
+        c: Number of input/output channels (both branches should have same channels)
+    """
+
+    def __init__(self, c):
+        """Initialize AdaptiveFeatureFusion with learnable fusion weights."""
+        super().__init__()
+        
+        # Learnable fusion weights for each branch
+        # These weights are learned during training to determine how much each branch contributes
+        self.weight_standard = nn.Parameter(torch.ones(1, c, 1, 1) * 0.5)
+        self.weight_denoising = nn.Parameter(torch.ones(1, c, 1, 1) * 0.5)
+        
+        # Optional: channel attention to refine fusion weights
+        self.ca = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            Conv(c, c // 16, 1, 1),
+            nn.ReLU(),
+            Conv(c // 16, c, 1, 1),
+            nn.Sigmoid()
+        )
+
+    def forward(self, standard_feat, denoising_feat):
+        """
+        Forward pass to fuse features from both branches.
+        
+        Args:
+            standard_feat: Output from StandardBranch (B, C, H, W)
+            denoising_feat: Output from DenoisingBranch (B, C, H, W)
+        
+        Returns:
+            Fused features (B, C, H, W)
+        """
+        # Adaptive weighted fusion
+        fused = (self.weight_standard * standard_feat + 
+                 self.weight_denoising * denoising_feat)
+        
+        # Apply channel attention to refine the fused features
+        attention = self.ca(fused)
+        
+        # Apply attention to the fused features
+        output = fused * attention
+        
+        return output
+
