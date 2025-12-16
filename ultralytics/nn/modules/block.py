@@ -50,6 +50,7 @@ __all__ = (
     "PSA",
     "SCDown",
     "TorchVision",
+    "A2C2f",
     "StandardBranch",
     "DenoisingBranch",
     "AdaptiveFeatureFusion",
