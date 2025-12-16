@@ -1444,6 +1444,10 @@ class DenoisingBranch(nn.Module):
 class AdaptiveFeatureFusion(nn.Module):
     def __init__(self, c):
         super().__init__()
+        assert c % 32 == 0, "Fusion channels must be multiple of 32"
+
+        self.conv_align = Conv(c, c, 1, 1)  # channel alignment
+
         self.weight_standard = nn.Parameter(torch.ones(1, c, 1, 1) * 0.5)
         self.weight_denoising = nn.Parameter(torch.ones(1, c, 1, 1) * 0.5)
 
@@ -1456,13 +1460,9 @@ class AdaptiveFeatureFusion(nn.Module):
         )
 
     def forward(self, x):
-        # x is a list: [standard_feat, denoising_feat]
-        standard_feat, denoising_feat = x
-
-        fused = (
-            self.weight_standard * standard_feat +
-            self.weight_denoising * denoising_feat
-        )
-
+        s, d = x
+        fused = self.weight_standard * s + self.weight_denoising * d
+        fused = self.conv_align(fused)  # guarantees correct channel alignment
         return fused * self.ca(fused)
+
 
