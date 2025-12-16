@@ -24,13 +24,13 @@ backbone:
   - [[-1, -2], 1, AdaptiveFeatureFusion, [128]] # 3-Fuse both branches
   
   # ===== R-ELAN BLOCKS WITH FLASH ATTENTION =====
-  - [-1, 4, A2C2f, [128, True, 4]] # 4-R-ELAN with Flash Attention (P2)
+  - [-1, 2, A2C2f, [64, True, 4]] # 4-R-ELAN with Flash Attention (P2)
   - [-1, 1, Conv, [256, 3, 2, 1, 4]] # 5-Downsampling to P3/8
-  - [-1, 4, A2C2f, [256, True, 4]] # 6-R-ELAN with Flash Attention (P3)
+  - [-1, 2, A2C2f, [128, True, 4]] # 6-R-ELAN with Flash Attention (P3)
   - [-1, 1, Conv, [512, 3, 2]] # 7-Downsampling to P4/16
-  - [-1, 4, A2C2f, [512, True, 4]] # 8-R-ELAN with Flash Attention (P4)
+  - [-1, 2, A2C2f, [256, True, 4]] # 8-R-ELAN with Flash Attention (P4)
   - [-1, 1, Conv, [1024, 3, 2]] # 9-Downsampling to P5/32
-  - [-1, 4, A2C2f, [1024, True, 1]] # 10-R-ELAN with Flash Attention (P5)
+  - [-1, 2, A2C2f, [512, True, 1]] # 10-R-ELAN with Flash Attention (P5)
 
 # YOLO12-turbo head
 head:
