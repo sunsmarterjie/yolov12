@@ -1451,11 +1451,13 @@ class AdaptiveFeatureFusion(nn.Module):
         self.weight_standard = nn.Parameter(torch.ones(1, c, 1, 1) * 0.5)
         self.weight_denoising = nn.Parameter(torch.ones(1, c, 1, 1) * 0.5)
 
+        # Channel attention without BatchNorm to avoid issues with 1x1 spatial dimensions
+        hidden_ch = max(c // 16, 8)
         self.ca = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
-            Conv(c, max(c // 16, 1), 1, 1),
-            nn.ReLU(),
-            Conv(max(c // 16, 1), c, 1, 1),
+            nn.Conv2d(c, hidden_ch, 1, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(hidden_ch, c, 1, bias=True),
             nn.Sigmoid()
         )
 
