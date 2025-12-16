@@ -1373,55 +1373,22 @@ class A2C2f(nn.Module):
 
 
 class StandardBranch(nn.Module):
-    """
-    Standard Branch for dual-branch feature extraction.
-    Uses 2 regular convolutions for standard feature extraction.
-    
-    Args:
-        c1: Input channels
-        c2: Output channels
-    """
-
-    def __init__(self, c1, c2):
-        """Initialize StandardBranch with 2 regular convolutions."""
+    def __init__(self, c1, c2=None):
         super().__init__()
-        
-        # First convolution
+        c2 = c2 or c1  # allow single-arg usage
         self.conv1 = Conv(c1, c2, 3, 1, 1)
-        
-        # Second convolution
         self.conv2 = Conv(c2, c2, 3, 1, 1)
 
     def forward(self, x):
-        """Forward pass through standard branch."""
-        # First Conv
-        x = self.conv1(x)
-        
-        # Second Conv
-        x = self.conv2(x)
-        
-        return x
+        return self.conv2(self.conv1(x))
+
 
 
 class DenoisingBranch(nn.Module):
-    """
-    Denoising Branch for dual-branch feature extraction.
-    Uses depthwise separable convolutions to reduce noise in features.
-    Runs in parallel with StandardBranch.
-    
-    Args:
-        c1: Input channels
-        c2: Output channels
-        n: Number of bottleneck layers (default 1)
-        shortcut: Use shortcut connections (default False)
-        g: Group convolutions (default 1)
-        e: Expansion ratio (default 0.5)
-    """
-
-    def __init__(self, c1, c2, n=1, shortcut=False, g=1, e=0.5):
-        """Initialize DenoisingBranch with depthwise separable convolutions."""
+    def __init__(self, c1, c2=None, n=1, shortcut=False, g=1, e=0.5):
         super().__init__()
-        self.c = int(c2 * e)  # hidden channels
+        c2 = c2 or c1
+        self.c = int(c2 * e)
         
         # Initial convolution to extract features
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
@@ -1475,52 +1442,27 @@ class DenoisingBranch(nn.Module):
 
 
 class AdaptiveFeatureFusion(nn.Module):
-    """
-    Adaptive Feature Fusion module that learns to fuse features from two branches.
-    Uses learnable weights to adaptively combine StandardBranch and DenoisingBranch outputs.
-    
-    Args:
-        c: Number of input/output channels (both branches should have same channels)
-    """
-
     def __init__(self, c):
-        """Initialize AdaptiveFeatureFusion with learnable fusion weights."""
         super().__init__()
-        
-        # Learnable fusion weights for each branch
-        # These weights are learned during training to determine how much each branch contributes
         self.weight_standard = nn.Parameter(torch.ones(1, c, 1, 1) * 0.5)
         self.weight_denoising = nn.Parameter(torch.ones(1, c, 1, 1) * 0.5)
-        
-        # Optional: channel attention to refine fusion weights
+
         self.ca = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
-            Conv(c, c // 16, 1, 1),
+            Conv(c, max(c // 16, 1), 1, 1),
             nn.ReLU(),
-            Conv(c // 16, c, 1, 1),
+            Conv(max(c // 16, 1), c, 1, 1),
             nn.Sigmoid()
         )
 
-    def forward(self, standard_feat, denoising_feat):
-        """
-        Forward pass to fuse features from both branches.
-        
-        Args:
-            standard_feat: Output from StandardBranch (B, C, H, W)
-            denoising_feat: Output from DenoisingBranch (B, C, H, W)
-        
-        Returns:
-            Fused features (B, C, H, W)
-        """
-        # Adaptive weighted fusion
-        fused = (self.weight_standard * standard_feat + 
-                 self.weight_denoising * denoising_feat)
-        
-        # Apply channel attention to refine the fused features
-        attention = self.ca(fused)
-        
-        # Apply attention to the fused features
-        output = fused * attention
-        
-        return output
+    def forward(self, x):
+        # x is a list: [standard_feat, denoising_feat]
+        standard_feat, denoising_feat = x
+
+        fused = (
+            self.weight_standard * standard_feat +
+            self.weight_denoising * denoising_feat
+        )
+
+        return fused * self.ca(fused)
 
