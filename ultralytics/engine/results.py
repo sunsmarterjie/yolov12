@@ -454,10 +454,10 @@ class Results(SimpleClass):
         im_gpu=None,
         kpt_radius=5,
         kpt_line=True,
-        labels=True,
+        labels=False,
         boxes=True,
         masks=True,
-        probs=True,
+        probs=False,
         show=False,
         save=False,
         filename=None,
@@ -536,7 +536,7 @@ class Results(SimpleClass):
         if pred_boxes is not None and show_boxes:
             for i, d in enumerate(reversed(pred_boxes)):
                 c, d_conf, id = int(d.cls), float(d.conf) if conf else None, None if d.id is None else int(d.id.item())
-                name = ("" if id is None else f"id:{id} ") + names[c]
+                name = ""
                 label = (f"{name} {d_conf:.2f}" if conf else name) if labels else None
                 box = d.xyxyxyxy.reshape(-1, 4, 2).squeeze() if is_obb else d.xyxy.squeeze()
                 annotator.box_label(
@@ -557,7 +557,7 @@ class Results(SimpleClass):
 
         # Plot Classify results
         if pred_probs is not None and show_probs:
-            text = ",\n".join(f"{names[j] if names else j} {pred_probs.data[j]:.2f}" for j in pred_probs.top5)
+            text = ",\n".join(f"{j} {pred_probs.data[j]:.2f}" for j in pred_probs.top5)
             x = round(self.orig_shape[0] * 0.03)
             annotator.text([x, x], text, txt_color=(255, 255, 255))  # TODO: allow setting colors
 
