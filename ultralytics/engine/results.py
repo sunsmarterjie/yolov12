@@ -454,7 +454,7 @@ class Results(SimpleClass):
         im_gpu=None,
         kpt_radius=5,
         kpt_line=True,
-        labels=False,
+        labels=True,
         boxes=True,
         masks=True,
         probs=False,
