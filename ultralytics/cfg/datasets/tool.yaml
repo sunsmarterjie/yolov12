@@ -1,0 +1,9 @@
+# Custom dataset for tool classification
+
+path: ../datasets/tool 
+train: images/train  # train images
+val: images/val      # val images
+
+# Classes
+names:
+  0: tool
