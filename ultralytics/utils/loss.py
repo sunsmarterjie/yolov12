@@ -204,8 +204,8 @@ class v8DetectionLoss:
         return dist2bbox(pred_dist, anchor_points, xywh=False)
 
     def __call__(self, preds, batch):
-        """Calculate the sum of the loss for box, cls and dfl multiplied by batch size."""
-        loss = torch.zeros(3, device=self.device)  # box, cls, dfl
+        """Calculate the sum of the loss for box and dfl multiplied by batch size."""
+        loss = torch.zeros(2, device=self.device)  # box, dfl
         feats = preds[1] if isinstance(preds, tuple) else preds
         pred_distri, pred_scores = torch.cat([xi.view(feats[0].shape[0], self.no, -1) for xi in feats], 2).split(
             (self.reg_max * 4, self.nc), 1
@@ -242,23 +242,17 @@ class v8DetectionLoss:
 
         target_scores_sum = max(target_scores.sum(), 1)
 
-        # Cls loss
-        # loss[1] = self.varifocal_loss(pred_scores, target_scores, target_labels) / target_scores_sum  # VFL way
-        # loss[1] = self.bce(pred_scores, target_scores.to(dtype)).sum() / target_scores_sum  # BCE
-        loss[1] = torch.zeros(1, device=self.device)
-
         # Bbox loss
         if fg_mask.sum():
             target_bboxes /= stride_tensor
-            loss[0], loss[2] = self.bbox_loss(
+            loss[0], loss[1] = self.bbox_loss(
                 pred_distri, pred_bboxes, anchor_points, target_bboxes, target_scores, target_scores_sum, fg_mask
             )
 
         loss[0] *= self.hyp.box  # box gain
-        # loss[1] *= self.hyp.cls  # cls gain
-        loss[2] *= self.hyp.dfl  # dfl gain
+        loss[1] *= self.hyp.dfl  # dfl gain
 
-        return loss.sum() * batch_size, loss.detach()  # loss(box, cls, dfl)
+        return loss.sum() * batch_size, loss.detach()  # loss(box, dfl)
 
 
 class v8SegmentationLoss(v8DetectionLoss):
@@ -271,7 +265,7 @@ class v8SegmentationLoss(v8DetectionLoss):
 
     def __call__(self, preds, batch):
         """Calculate and return the loss for the YOLO model."""
-        loss = torch.zeros(4, device=self.device)  # box, cls, dfl
+        loss = torch.zeros(3, device=self.device)  # box, seg, dfl
         feats, pred_masks, proto = preds if len(preds) == 3 else preds[1]
         batch_size, _, mask_h, mask_w = proto.shape  # batch size, number of masks, mask height, mask width
         pred_distri, pred_scores = torch.cat([xi.view(feats[0].shape[0], self.no, -1) for xi in feats], 2).split(
@@ -317,14 +311,9 @@ class v8SegmentationLoss(v8DetectionLoss):
 
         target_scores_sum = max(target_scores.sum(), 1)
 
-        # Cls loss
-        # loss[1] = self.varifocal_loss(pred_scores, target_scores, target_labels) / target_scores_sum  # VFL way
-        # loss[2] = self.bce(pred_scores, target_scores.to(dtype)).sum() / target_scores_sum  # BCE
-        loss[2] = torch.zeros(1, device=self.device)
-
         if fg_mask.sum():
             # Bbox loss
-            loss[0], loss[3] = self.bbox_loss(
+            loss[0], loss[2] = self.bbox_loss(
                 pred_distri,
                 pred_bboxes,
                 anchor_points,
@@ -348,10 +337,9 @@ class v8SegmentationLoss(v8DetectionLoss):
 
         loss[0] *= self.hyp.box  # box gain
         loss[1] *= self.hyp.box  # seg gain
-        # loss[2] *= self.hyp.cls  # cls gain
-        loss[3] *= self.hyp.dfl  # dfl gain
+        loss[2] *= self.hyp.dfl  # dfl gain
 
-        return loss.sum() * batch_size, loss.detach()  # loss(box, cls, dfl)
+        return loss.sum() * batch_size, loss.detach()  # loss(box, seg, dfl)
 
     @staticmethod
     def single_mask_loss(
@@ -460,7 +448,7 @@ class v8PoseLoss(v8DetectionLoss):
 
     def __call__(self, preds, batch):
         """Calculate the total loss and detach it."""
-        loss = torch.zeros(5, device=self.device)  # box, cls, dfl, kpt_location, kpt_visibility
+        loss = torch.zeros(4, device=self.device)  # box, dfl, kpt_location, kpt_visibility
         feats, pred_kpts = preds if isinstance(preds[0], list) else preds[1]
         pred_distri, pred_scores = torch.cat([xi.view(feats[0].shape[0], self.no, -1) for xi in feats], 2).split(
             (self.reg_max * 4, self.nc), 1
@@ -498,15 +486,10 @@ class v8PoseLoss(v8DetectionLoss):
 
         target_scores_sum = max(target_scores.sum(), 1)
 
-        # Cls loss
-        # loss[1] = self.varifocal_loss(pred_scores, target_scores, target_labels) / target_scores_sum  # VFL way
-        # loss[3] = self.bce(pred_scores, target_scores.to(dtype)).sum() / target_scores_sum  # BCE
-        loss[3] = torch.zeros(1, device=self.device)
-
         # Bbox loss
         if fg_mask.sum():
             target_bboxes /= stride_tensor
-            loss[0], loss[4] = self.bbox_loss(
+            loss[0], loss[3] = self.bbox_loss(
                 pred_distri, pred_bboxes, anchor_points, target_bboxes, target_scores, target_scores_sum, fg_mask
             )
             keypoints = batch["keypoints"].to(self.device).float().clone()
@@ -518,12 +501,11 @@ class v8PoseLoss(v8DetectionLoss):
             )
 
         loss[0] *= self.hyp.box  # box gain
-        loss[1] *= self.hyp.pose  # pose gain
-        loss[2] *= self.hyp.kobj  # kobj gain
-        # loss[3] *= self.hyp.cls  # cls gain
-        loss[4] *= self.hyp.dfl  # dfl gain
+        loss[1] *= self.hyp.pose # pose gain
+        loss[2] *= self.hyp.kobj # kobj gain
+        loss[3] *= self.hyp.dfl  # dfl gain
 
-        return loss.sum() * batch_size, loss.detach()  # loss(box, cls, dfl)
+        return loss.sum() * batch_size, loss.detach()  # loss(box, dfl)
 
     @staticmethod
     def kpts_decode(anchor_points, pred_kpts):
@@ -640,7 +622,7 @@ class v8OBBLoss(v8DetectionLoss):
 
     def __call__(self, preds, batch):
         """Calculate and return the loss for the YOLO model."""
-        loss = torch.zeros(3, device=self.device)  # box, cls, dfl
+        loss = torch.zeros(2, device=self.device)  # box, dfl
         feats, pred_angle = preds if isinstance(preds[0], list) else preds[1]
         batch_size = pred_angle.shape[0]  # batch size, number of masks, mask height, mask width
         pred_distri, pred_scores = torch.cat([xi.view(feats[0].shape[0], self.no, -1) for xi in feats], 2).split(
@@ -691,25 +673,19 @@ class v8OBBLoss(v8DetectionLoss):
 
         target_scores_sum = max(target_scores.sum(), 1)
 
-        # Cls loss
-        # loss[1] = self.varifocal_loss(pred_scores, target_scores, target_labels) / target_scores_sum  # VFL way
-        # loss[1] = self.bce(pred_scores, target_scores.to(dtype)).sum() / target_scores_sum  # BCE
-        loss[1] = torch.zeros(1, device=self.device)
-
         # Bbox loss
         if fg_mask.sum():
             target_bboxes[..., :4] /= stride_tensor
-            loss[0], loss[2] = self.bbox_loss(
+            loss[0], loss[1] = self.bbox_loss(
                 pred_distri, pred_bboxes, anchor_points, target_bboxes, target_scores, target_scores_sum, fg_mask
             )
         else:
             loss[0] += (pred_angle * 0).sum()
 
         loss[0] *= self.hyp.box  # box gain
-        # loss[1] *= self.hyp.cls  # cls gain
-        loss[2] *= self.hyp.dfl  # dfl gain
+        loss[1] *= self.hyp.dfl  # dfl gain
 
-        return loss.sum() * batch_size, loss.detach()  # loss(box, cls, dfl)
+        return loss.sum() * batch_size, loss.detach()  # loss(box, dfl)
 
     def bbox_decode(self, anchor_points, pred_dist, pred_angle):
         """
