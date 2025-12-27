@@ -158,9 +158,7 @@ small_data_logs/
 # 📊 Final Results Summary
 
 ### ❗ DO NOT MERGE INTO MAIN UNTIL THIS SECTION IS FILLED 
-**Insert the final mAP values for each model and each dataset percentage.**
-
-```
+**Table: Best mAP50-95 values for each model and each dataset percentage**
 |   Dataset % |   YOLOv12-n |   YOLOv12-s |   YOLOv12-m |   YOLOv12-l |   YOLOv12-x |
 |-------------|-------------|-------------|-------------|-------------|-------------|
 |      0.3125 |     0.00177 |     0.00585 |     0.00896 |     0.00912 |     0.01189 |
@@ -178,9 +176,10 @@ small_data_logs/
 |     80      |     0.38729 |     0.45238 |     0.4962  |     0.51158 |     0.519   |
 |     90      |     0.38902 |     0.46326 |     0.50416 |     0.51805 |     0.52846 |
 |    100      |     0.39996 |     0.46807 |     0.51434 |     0.52403 |     0.53549 |
-```
 
----
+Let’s discuss in depth the results presented in the table above.
+First of all, as was expected, the precision of the inference gradually increases with the increase in dataset size, and generally, training on datasets smaller than the 5% mark results in unusable trained models. That being said, something truly interesting starts happening at a dataset size of 30% and above. The delta in the metric measurements between 30% and 100% drops below 10% across all models, meaning that supplying an additional 70% of the dataset only increases the mAP50–95 metric by 10%!
+This is particularly interesting in data-scarce scenarios, where reaching a critical threshold of training data can lead to disproportionate performance gains. These results provide guidance for a clearer min-maxing strategy when training for a specific task, allowing data availability and cost to be balanced much more effectively.
 
 # 📦 Repository Structure (Simplified)
 
