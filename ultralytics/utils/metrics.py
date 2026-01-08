@@ -746,8 +746,23 @@ class Metric(SimpleClass):
         return maps
 
     def fitness(self):
-        """Model fitness as a weighted combination of metrics."""
-        w = [0.0, 0.0, 0.1, 0.9]  # weights for [P, R, mAP@0.5, mAP@0.5:0.95]
+        """
+        By default this uses the original Ultralytics weights prioritizing mAP@0.5:0.95.
+        To prefer mAP@0.5 set `ULTRA_BEST=map50` before running training.
+        """
+        import os
+
+        choice = os.getenv("ULTRA_BEST", "map").lower()
+        if choice in ("map50", "map_50", "ap50"):  # Focus only on finding the object
+            w = [0.0, 0.0, 1.0, 0.0]  
+        elif choice in ("precision", "p"): # Focus only on being "sure"
+            w = [1.0, 0.0, 0.0, 0.0]
+        elif choice in ("recall", "r"): # Focus only on finding everything
+            w = [0.0, 1.0, 0.0, 0.0]
+        elif choice == "perfect_iou":  # 100% focus on box accuracy
+            w = [0.0, 0.0, 0.0, 1.0]
+        else:                          # Balanced: default Ultralytics fitness function
+            w = [0.0, 0.0, 0.1, 0.9]
         return (np.array(self.mean_results()) * w).sum()
 
     def update(self, results):
