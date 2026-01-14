@@ -199,62 +199,113 @@ yolov12_SmallData/
 ```
 
 ---
-
 ## ⬜ TEMPLATE: Reproducing Official YOLO Results
 
-**Goal:** Show that our training pipeline reproduces the original YOLOv12 results closely enough (within a few percentage points), and only then move on to small-data experiments.
 
-Tasks for this section:
+## ⬜ Small-Data Results and Interpretation
 
-1. **Compare our full-data runs to the official YOLOv12 results.**  
-   - For each model size (n, s, m, l, x), collect:  
-     - our best mAP50-95 on the full 100% dataset,  
-     - the corresponding official mAP from the YOLOv12 paper or repository.
-
-2. **Plot per-model comparison curves.**  
-   - Create a figure with 5 subplots in a single row (one subplot per model size).  
-   - For each model, show our training curve vs. the reference curve or reported best point from the authors.  
-   - Visually highlight how close our results are to the official ones.
-
-3. **Create a comparison table.**  
-   - Table with columns: Model, Our best mAP50-95, Official mAP50-95, Absolute difference (Δ), Relative difference (%).  
-   - Expect differences of only a few percentage points.  
-   - Conclude that the reproduction is successful if deviations stay in that small range.
-
-4. **Write a short textual conclusion.**  
-   - Explain that our training reliably reproduces the authors’ performance on the full dataset.  
-   - Based on this, justify moving to small-data experiments.
-
-**THIS ENTIRE SUBSECTION MUST BE WRITTEN BY HAND ONCE OFFICIAL REFERENCE NUMBERS AND OUR FINAL NUMBERS ARE AVAILABLE.**
+This section summarizes how **YOLOv12 (n/s/m/l/x)** behaves as training data is reduced from **100%** of COCO train2017 down to **0.3125%** (proportional subsampling). Reported values correspond to **best mAP50–95** on COCO val.
 
 ---
 
-## ⬜ TEMPLATE: Small-Data Results and Interpretation
+## Overall trends
 
-**Goal:** Describe how performance changes as the amount of training data is reduced and provide hypotheses for why the behavior is not strictly linear.
+Across all five model sizes, **mAP50–95 increases monotonically** with dataset size, but the relationship is **strongly non-linear**. A reduction in dataset size by a factor of two does **not** imply a comparable reduction in detection quality.
 
-Tasks for this section:
+**YOLOv12-x (example trajectory, best mAP50–95):**
 
-1. **Describe overall trends.**  
-   - Explain how mAP50-95 changes as we move from 100% → 50% → 20% → 10% → 5% → 2.5% → ...  
-   - Comment that **cutting the dataset size in half does not necessarily halve the performance** — the degradation is slower and model performance remains surprisingly robust even at smaller scales.
+- **100%:** 0.535  
+- **50%:** 0.485 (≈ **90.6%** of full-data performance)  
+- **20%:** 0.392 (≈ **73.3%**)  
+- **10%:** 0.309 (≈ **57.7%**)  
+- **5%:** 0.217 (≈ **40.5%**)  
+- **2.5%:** 0.113 (≈ **21.2%**)  
+- **1.25%:** 0.059 (≈ **11.0%**)  
+- **0.625%:** 0.028 (≈ **5.2%**)  
+- **0.3125%:** 0.012 (≈ **2.2%**)  
 
-2. **Highlight interesting regimes.**  
-   - Identify thresholds where performance drops more sharply (e.g., below 5% or 1.25%).  
-   - Point out which model sizes are more robust to small data (e.g., n/s vs. x).
+A similar shape appears for the other model sizes, with a relatively gentle decline at moderate fractions and a steep collapse in the extreme small-data tail.
 
-3. **Hypothesize why performance does not scale linearly with dataset size.**  
-   Possible directions to discuss (to be elaborated by the author):  
-   - redundancy in COCO (many images contain similar objects),  
-   - strong inductive bias in YOLOv12 backbone and head,  
-   - effectiveness of data augmentation on small datasets,  
-   - the role of pre-training or transfer effects (if applicable).
+![Best mAP50–95 vs dataset size](plots/train/best_map5095_vs_size_lines.png)
 
-4. **Connect back to research questions.**  
-   - Summarize what the experiments tell us about YOLOv12 on small data.  
-   - Suggest potential future experiments (e.g., different sampling strategies, other backbones, finer-grained sizes).
+---
 
-**FILL THIS SECTION WITH A NARRATIVE EXPLANATION OF THE OBSERVED CURVES AND TABLES.**
+## Interesting regimes
+
+### Regime A — Diminishing returns at large data scales (≥50%)
+
+From **50% → 100%**, absolute gains remain modest (on the order of **≈ +0.035 to +0.052** mAP50–95 depending on the model), and relative improvements are typically around **~9–10%**. This behavior is consistent with a large amount of redundant visual information at COCO scale once core modes of the data distribution are sufficiently covered.
+
+### Regime B — Moderate degradation from 20% → 10% → 5%
+
+Between **20%** and **5%**, performance decreases steadily but remains usable for all models. Two representative examples:
+
+- **YOLOv12-l:** 0.387 → 0.298 → 0.210 (20% → 10% → 5%)  
+- **YOLOv12-n:** 0.297 → 0.239 → 0.178 (20% → 10% → 5%)  
+
+This region separates the “comfortable” data regime from the collapse regime and captures a practical operating range for cost–accuracy trade-offs.
+
+### Regime C — Sharp collapse below ~5% (the “cliff”)
+
+The transition **5% → 2.5%** marks the steepest drop across the sweep. The ratio of the 2.5% score to the 5% score is approximately:
+
+- **x:** ~52% (0.217 → 0.113)  
+- **l:** ~49% (0.210 → 0.102)  
+- **m:** ~44% (0.214 → 0.093)  
+- **s:** ~37% (0.198 → 0.073)  
+- **n:** ~28% (0.178 → 0.049)  
+
+Below **1.25%**, scores become very small for all models, indicating a data-insufficiency regime where stable generalization is not reliably achieved.
+
+![Cliff effect (5% → 2.5%)](plots/analysis/cliff_effect_5_to_2_5_delta.png)
+
+---
+
+## Robustness by model size
+
+Across dataset sizes, larger models (**l/x**) achieve the highest **absolute** mAP50–95. In the extreme small-data tail, larger models also retain a higher fraction of their full-data performance. For example at **2.5%**:
+
+- **YOLOv12-x:** ≈ **21%** of its 100% performance  
+- **YOLOv12-n:** ≈ **12%** of its 100% performance  
+
+Near **5%**, **m/l/x** are relatively close, which is consistent with optimization noise becoming more visible as data becomes limiting.
+
+![Retention vs dataset size](plots/analysis/retention_vs_dataset_size_categorical.png)
+
+---
+
+## Why scaling is non-linear (hypotheses)
+
+Several factors plausibly contribute to the observed non-linearity:
+
+- **Redundancy in COCO:** many images share similar object appearances and contexts; once common patterns are learned, additional samples provide limited novelty, which aligns with diminishing returns at ≥50%.  
+- **Architecture and inductive bias:** YOLO-style backbones and multi-scale heads can generalize from fewer examples once core visual features are established, flattening the curve at moderate fractions.  
+- **Augmentation-driven effective data expansion:** standard augmentation pipelines can partially compensate for reduced data by increasing diversity in appearance and geometry, up to the point where the base dataset becomes too small.  
+- **Mode coverage vs. class coverage:** proportional sampling preserves class ratios but does not guarantee coverage of rare *modes* (tiny objects, occlusions, crowded scenes). Missing these modes can disproportionately harm mAP50–95 and plausibly explains the cliff below ~5%.
+
+---
+
+## Training stability signal (late-epoch peaking)
+
+A proxy for stability is the ratio **best_epoch / last_epoch**. Values closer to **1.0** correspond to best validation performance occurring near the end of training, which often accompanies higher variance and less stable convergence in extremely small-data regimes.
+
+![Late-epoch peaking indicator](plots/analysis/best_epoch_ratio_vs_dataset_size_categorical.png)
+
+---
+
+## Connection to the research questions
+
+The experiments indicate that YOLOv12 remains **surprisingly robust** down to roughly **10–20%** of COCO under proportional sampling, while a clear threshold exists around **~5%** below which performance collapses rapidly and becomes near-unusable by **≤1.25%** when trained from scratch. Model scaling improves accuracy throughout the sweep and appears especially beneficial in the extreme low-data tail.
+
+---
+
+## Potential follow-up experiments
+
+- A direct comparison of training outcomes for **proportional vs random vs top-N** subsets.  
+- Multiple-seed repetitions in the **0.3125–5%** range to quantify variance and instability.  
+- Per-class AP and **AP_small / AP_medium / AP_large** breakdowns to identify which failure modes dominate first.  
+- Low-data recipe variants (training length, regularization, freezing strategy, augmentation strength) to test whether the cliff can be shifted.  
+- Replication on other datasets/domains to determine whether the **~5%** threshold is COCO-specific.
 
 ---
 
