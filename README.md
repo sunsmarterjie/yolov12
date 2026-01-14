@@ -199,8 +199,40 @@ yolov12_SmallData/
 ```
 
 ---
-## ⬜ TEMPLATE: Reproducing Official YOLO Results
+## ⬜ Reproducing Official YOLO Results
 
+### Full-data runs compared to the official YOLOv12 community results
+
+**Table: Best mAP50-95 values compared to the community release**
+|Source|   YOLOv12-n |   YOLOv12-s |   YOLOv12-m |   YOLOv12-l |   YOLOv12-x |
+|------------|-------------|-------------|-------------|-------------|-------------|
+|**Models trained during this research**|     38.9 |     46.3 |     50.4 |     51.8 |    52.8 |
+|**Official YOLOv12 community release**|     40.6 |     48.0 |     52.5 |     53.8 |     55.4 |
+
+This table compares the best mAP50–95 scores obtained from models trained during this research with the official YOLOv12 community release across all model scales (n–x) on full dataset. For the smallest variants (YOLOv12-n and YOLOv12-s), the models trained in this study achieve competitive performance, trailing the official benchmarks by 1.7 and 1.7 mAP points, respectively. This suggests that the training pipeline used in this work is reasonably effective though models slightly underperforming compared to the community release.
+As model complexity increases (YOLOv12-m, -l, and -x), the performance gap widens, but only marginally, reaching up to 2.4 mAP points for the largest variant.
+
+The results demonstrate that our training produced strong and reliable baselines for the further dataset scaling experiments, producing predictable results which allows to predict real-world scenarios using data from this research.
+### Per-model comparison curves.
+
+| ![](plots/comparison/n-comparison.png) | ![](plots/comparison/s-comparison.png) | ![](plots/comparison/m-comparison.png) |
+|---------------|---------------|---------------|
+| ![](plots/comparison/l-comparison.png) |![](plots/comparison/x-comparison.png)||
+
+These plots showcase how close our baseline results are to the official ones. A notable distinction here is our results feature triggered early stopping, which as you may notice resulted in decreased epoch count. Another interesting feature these plots highlight is that our training is approaching maximum mAP50-95 value quicker, compared.
+
+**Table: Resulting diff table**
+| Model | Our best mAP50–95 | Official mAP50–95 | Absolute difference | Relative difference (%) |
+|-------|------------------|-------------------|---------------------|-------------------------|
+| **n**     | 0.39996          | 0.40385           | -0.00389            | -0.96                   |
+| **s**     | 0.46807          | 0.47918           | -0.01111            | -2.32                   |
+| **m**     | 0.51434          | 0.52551           | -0.01117            | -2.13                   |
+| **l**     | 0.52403          | 0.53866           | -0.01463            | -2.72                   |
+| **x**     | 0.53549          | 0.55404           | -0.01855            | -3.35                   |
+
+The results show that all reproduced models deviate from the official mAP50–95 benchmarks by less than 3.5%, indicating that the reproduction is successful and closely matches the community-reported performance.
+### To summarize the full-data results
+Overall, the full-data experiments demonstrate that our YOLOv12 training pipeline successfully reproduces the official community results across all model scales. Although the reproduced models consistently achieve slightly lower mAP50–95 scores, the deviations remain small (below 3.5%) and follow the same scaling trends observed in the official release. The close alignment of performance curves, combined with predictable convergence behavior indicates that the reproduction is robust and reliable. These results validate the experimental setup and provide a solid baseline for subsequent dataset scaling experiments.
 
 ## ⬜ Small-Data Results and Interpretation
 
