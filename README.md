@@ -156,8 +156,6 @@ small_data_logs/
 ---
 
 # 📊 Final Results Summary
-
-### ❗ DO NOT MERGE INTO MAIN UNTIL THIS SECTION IS FILLED 
 **Table: Best mAP50-95 values for each model and each dataset percentage**
 |   Dataset % |   YOLOv12-n |   YOLOv12-s |   YOLOv12-m |   YOLOv12-l |   YOLOv12-x |
 |-------------|-------------|-------------|-------------|-------------|-------------|
@@ -260,22 +258,88 @@ Tasks for this section:
 
 ---
 
-# ⬜ TEMPLATE: Full Reproduction Guide
+# ⬜ Full Reproduction Guide
 
-## 1️⃣ Downloading and Preparing COCO  
-**DESCRIBE WHICH SCRIPT DOWNLOADS COCO AND WHERE IT STORES FILES.**
+## 1️⃣ Downloading and Preparing COCO
 
-## 2️⃣ Generating Proportional / Random / Top-N Subsets  
-**DESCRIBE HOW TO RUN THE SUBSET GENERATOR.**
+Download COCO 2017 (train/val images + annotations) into a directory of your choice (this directory will be used as `path:` in YOLO YAMLs).
 
-## 3️⃣ Creating YAML Training Configs  
-**DESCRIBE HOW YAML FILES ARE GENERATED OR WHERE THEY ARE STORED.**
+```bash
+COCO_DIR=/path/to/coco
+mkdir -p "$COCO_DIR" && cd "$COCO_DIR"
 
-## 4️⃣ Generating SLURM Training Scripts  
-**EXPLAIN HOW SLURM FILES ARE GENERATED FROM A TEMPLATE.**
+wget -c http://images.cocodataset.org/zips/train2017.zip
+wget -c http://images.cocodataset.org/zips/val2017.zip
+wget -c http://images.cocodataset.org/annotations/annotations_trainval2017.zip
 
-## 5️⃣ Launching Training on Leonardo  
-**EXPLAIN HOW TO RUN SBATCH AND WHAT OUTPUT TO EXPECT.**
+unzip -q train2017.zip
+unzip -q val2017.zip
+unzip -q annotations_trainval2017.zip
+```
+
+## 2️⃣ Creating YAML Training Configs  
+Generate one YOLO dataset YAML per subset list file using:
+
+- Script: `scripts/generate_lowdata_yamls.py`
+
+Run:
+```bash
+python scripts/generate_lowdata_yamls.py \
+  --coco-path /path/to/coco \
+  --lists-dir ./datasets \
+  --out-dir ./configs/LowData/Datasets \
+  --val val2017.txt \
+  --test test-dev2017.txt
+```
+
+Each YAML will have the form:
+```yaml
+path: /path/to/coco
+train: train2017_0.625_p.txt
+val: val2017.txt
+test: test-dev2017.txt
+
+# Classes
+names:
+  0: person
+  ...
+  79: toothbrush
+```
+
+## 3️⃣ Generating SLURM Training Scripts  
+Generate SLURM job scripts from a template using:
+
+- Script: `scripts/generate_slurm_jobs.py`
+
+Run:
+```bash
+python scripts/generate_slurm_jobs.py \
+  --yamls-dir ./configs/LowData/Datasets \
+  --out-dir ./slurm/jobs \
+  --logs-root ./run_logs/LowData \
+  --partition <your_partition> \
+  --time 04:00:00 \
+  --nodes 4 \
+  --gpus-per-node 4 \
+  --cpus-per-task 8 \
+  --run-cmd "python -u /path/to/train.py"
+```
+
+## 4️⃣ Launching Training on Leonardo  
+Submit one job:
+```bash
+sbatch slurm/jobs/coco_10_p.slurm
+```
+
+Submit all jobs:
+```bash
+for f in slurm/jobs/*.slurm; do sbatch "$f"; done
+```
+
+SLURM stdout/stderr logs will be written under:
+```text
+run_logs/LowData/<experiment_name>_<jobid>/
+```
 
 ---
 
