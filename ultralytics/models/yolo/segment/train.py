@@ -39,7 +39,7 @@ class SegmentationTrainer(yolo.detect.DetectionTrainer):
 
     def get_validator(self):
         """Return an instance of SegmentationValidator for validation of YOLO model."""
-        self.loss_names = "box_loss", "seg_loss", "cls_loss", "dfl_loss"
+        self.loss_names = "box_loss", "seg_loss", "dfl_loss"
         return yolo.segment.SegmentationValidator(
             self.test_loader, save_dir=self.save_dir, args=copy(self.args), _callbacks=self.callbacks
         )
@@ -49,7 +49,7 @@ class SegmentationTrainer(yolo.detect.DetectionTrainer):
         plot_images(
             batch["img"],
             batch["batch_idx"],
-            batch["cls"].squeeze(-1),
+            batch["cls"].squeeze(-1) if "cls" in batch else torch.zeros(0),
             batch["bboxes"],
             masks=batch["masks"],
             paths=batch["im_file"],

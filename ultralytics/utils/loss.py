@@ -220,7 +220,9 @@ class v8DetectionLoss:
         anchor_points, stride_tensor = make_anchors(feats, self.stride, 0.5)
 
         # Targets
-        targets = torch.cat((batch["batch_idx"].view(-1, 1), batch["cls"].view(-1, 1), batch["bboxes"]), 1)
+        batch_idx = batch["batch_idx"].view(-1, 1)
+        dummy_cls = torch.zeros_like(batch_idx)  # No classification - use dummy zeros
+        targets = torch.cat((batch_idx, dummy_cls, batch["bboxes"]), 1)
         targets = self.preprocess(targets.to(self.device), batch_size, scale_tensor=imgsz[[1, 0, 1, 0]])
         gt_labels, gt_bboxes = targets.split((1, 4), 2)  # cls, xyxy
         mask_gt = gt_bboxes.sum(2, keepdim=True).gt_(0.0)
@@ -284,7 +286,9 @@ class v8SegmentationLoss(v8DetectionLoss):
         # Targets
         try:
             batch_idx = batch["batch_idx"].view(-1, 1)
-            targets = torch.cat((batch_idx, batch["cls"].view(-1, 1), batch["bboxes"]), 1)
+            # No classification - use dummy zeros for class labels
+            dummy_cls = torch.zeros_like(batch_idx)
+            targets = torch.cat((batch_idx, dummy_cls, batch["bboxes"]), 1)
             targets = self.preprocess(targets.to(self.device), batch_size, scale_tensor=imgsz[[1, 0, 1, 0]])
             gt_labels, gt_bboxes = targets.split((1, 4), 2)  # cls, xyxy
             mask_gt = gt_bboxes.sum(2, keepdim=True).gt_(0.0)
@@ -466,7 +470,8 @@ class v8PoseLoss(v8DetectionLoss):
         # Targets
         batch_size = pred_scores.shape[0]
         batch_idx = batch["batch_idx"].view(-1, 1)
-        targets = torch.cat((batch_idx, batch["cls"].view(-1, 1), batch["bboxes"]), 1)
+        dummy_cls = torch.zeros_like(batch_idx)  # No classification - use dummy zeros
+        targets = torch.cat((batch_idx, dummy_cls, batch["bboxes"]), 1)
         targets = self.preprocess(targets.to(self.device), batch_size, scale_tensor=imgsz[[1, 0, 1, 0]])
         gt_labels, gt_bboxes = targets.split((1, 4), 2)  # cls, xyxy
         mask_gt = gt_bboxes.sum(2, keepdim=True).gt_(0.0)
@@ -641,7 +646,8 @@ class v8OBBLoss(v8DetectionLoss):
         # targets
         try:
             batch_idx = batch["batch_idx"].view(-1, 1)
-            targets = torch.cat((batch_idx, batch["cls"].view(-1, 1), batch["bboxes"].view(-1, 5)), 1)
+            dummy_cls = torch.zeros_like(batch_idx)  # No classification - use dummy zeros
+            targets = torch.cat((batch_idx, dummy_cls, batch["bboxes"].view(-1, 5)), 1)
             rw, rh = targets[:, 4] * imgsz[0].item(), targets[:, 5] * imgsz[1].item()
             targets = targets[(rw >= 2) & (rh >= 2)]  # filter rboxes of tiny size to stabilize training
             targets = self.preprocess(targets.to(self.device), batch_size, scale_tensor=imgsz[[1, 0, 1, 0]])
