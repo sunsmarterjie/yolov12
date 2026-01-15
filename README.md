@@ -428,7 +428,7 @@ run_logs/LowData/<experiment_name>_<jobid>/
 
 # 🙌 Acknowledgements
 
-- **Leonardo Supercomputer** — for HPC compute resources  
+- We acknowledge **EuroHPC Joint Undertaking** for awarding us access to **Leonardo** at **CINECA, Italy**.
 - **YOLOv12 Research Team** — for model architecture & training code  
 - **COCO Consortium** — for dataset availability  
 - Everyone who contributed to distributed training and analysis  
