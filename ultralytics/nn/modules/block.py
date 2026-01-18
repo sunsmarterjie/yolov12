@@ -1391,53 +1391,44 @@ class DenoisingBranch(nn.Module):
         c2 = c2 or c1
         self.c = int(c2 * e)
         
-        # Initial convolution to extract features
-        self.cv1 = Conv(c1, 2 * self.c, 1, 1)
-        
-        self.dw_conv1 = Conv(self.c, self.c, 3, 1, p=1, g=self.c)
+        # If input and output channels match, use identity for first/last
+        self.use_identity = (c1 == c2)
+        self.cv1 = nn.Identity() if self.use_identity else Conv(c1, 2 * self.c, 1, 1)
+        # Use DWConv for depthwise, Conv for pointwise
+        self.dw_conv1 = DWConv(self.c, self.c, k=3, s=1)
         self.pw_conv1 = Conv(self.c, self.c, 1, 1)
-        
-        # Second depthwise separable block
-        self.dw_conv2 = Conv(self.c, self.c, 3, 1, p=1, g=self.c)
+        self.dw_conv2 = DWConv(self.c, self.c, k=3, s=1)
         self.pw_conv2 = Conv(self.c, self.c, 1, 1)
         
         # Activation function
-        self.act = nn.GELU()
+        self.act = nn.ReLU()
         
-        # Bottleneck layers for feature refinement
-        self.m = nn.ModuleList(
-            Bottleneck(self.c, self.c, shortcut, g, k=((3, 3), (3, 3)), e=1.0)
-            for _ in range(n)
-        )
+        # Bottleneck layers for feature refinement (optional, can be reduced or removed for minimal convs)
+        # Remove bottleneck layers for minimal convs
+        self.m = nn.ModuleList()
         
-        # Final convolution
-        self.cv2 = Conv((2 + n) * self.c, c2, 1)
+        # Use identity for last conv if possible
+        self.cv2 = nn.Identity() if self.use_identity else Conv(2 * self.c, c2, 1)
 
     def forward(self, x):
-        """Forward pass through denoising branch."""
+        """Forward pass through denoising branch with residual skip."""
+        identity = x
         # Extract features
         y = list(self.cv1(x).chunk(2, 1))
-        
-        # Apply depthwise separable convolutions to first part (denoising pathway)
-        # First depthwise separable block
+        # Depthwise + pointwise conv blocks
         denoised = self.dw_conv1(y[0])
         denoised = self.act(denoised)
         denoised = self.pw_conv1(denoised)
-        
-        # Second depthwise separable block
         denoised = self.dw_conv2(denoised)
         denoised = self.act(denoised)
         denoised = self.pw_conv2(denoised)
-        
         y[0] = denoised
-        
-        # Process through bottleneck layers (using the denoised features)
-        y.extend(m(y[-1]) for m in self.m)
-        
-        # Output - concatenate all features
-        # y has: [denoised, y[1], bottleneck_outputs...]
-        # Total: (2 + n) * self.c channels, so cv2 should expect this
-        return self.cv2(torch.cat(y, 1))
+        # No bottleneck layers for minimal convs
+        out = self.cv2(torch.cat(y, 1))
+        # Residual skip connection if shape matches
+        if identity.shape == out.shape:
+            out = out + identity
+        return out
 
 
 class AdaptiveFeatureFusion(nn.Module):
