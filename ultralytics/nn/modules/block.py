@@ -1376,7 +1376,7 @@ class A2C2f(nn.Module):
 class StandardBranch(nn.Module):
     def __init__(self, c1, c2=None):
         super().__init__()
-        c2 = c2 or c1  # allow single-arg usage
+        c2 = c2 or c1
         self.conv1 = Conv(c1, c2, 3, 1, 1)
         self.conv2 = Conv(c2, c2, 3, 1, 1)
 
@@ -1394,14 +1394,12 @@ class DenoisingBranch(nn.Module):
         # Initial convolution to extract features
         self.cv1 = Conv(c1, 2 * self.c, 1, 1)
         
-        # Depthwise separable convolutions for noise reduction
-        # First depthwise separable block
-        self.dw_conv1 = Conv(self.c, self.c, 3, 1, p=1, g=self.c)  # depthwise
-        self.pw_conv1 = Conv(self.c, self.c, 1, 1)  # pointwise
+        self.dw_conv1 = Conv(self.c, self.c, 3, 1, p=1, g=self.c)
+        self.pw_conv1 = Conv(self.c, self.c, 1, 1)
         
         # Second depthwise separable block
-        self.dw_conv2 = Conv(self.c, self.c, 3, 1, p=1, g=self.c)  # depthwise
-        self.pw_conv2 = Conv(self.c, self.c, 1, 1)  # pointwise
+        self.dw_conv2 = Conv(self.c, self.c, 3, 1, p=1, g=self.c)
+        self.pw_conv2 = Conv(self.c, self.c, 1, 1)
         
         # Activation function
         self.act = nn.GELU()

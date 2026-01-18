@@ -23,7 +23,7 @@ backbone:
   - [-2, 1, DenoisingBranch,    [128]] # 2-Denoising path from P1 to P2
   - [[-1, -2], 1, AdaptiveFeatureFusion, [128]] # 3-Fuse both branches
   
-  # ===== R-ELAN BLOCKS WITH STANDARD CONVOLUTION =====
+  # ===== R-ELAN BLOCKS (standard, no attention) =====
   - [-1, 2, C2f, [256]] # 4-R-ELAN (P2)
   - [-1, 1, Conv, [256, 3, 2, 1, 4]] # 5-Downsampling to P3/8
   - [-1, 2, C2f, [256]] # 6-R-ELAN (P3)
