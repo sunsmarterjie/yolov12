@@ -1,3 +1,17 @@
 *__pycache__/
 ultralytics.egg-info
 runs/
+.claude
+.poultry-data
+poultry-data/
+*.pyc
+*.pyo
+.DS_Store
+
+# Large model files
+models/*.pt
+!models/poultry-yolov12n-v1.pt
+
+# Large video files
+samplevideos/*.mp4
+samplevideos/*.avi

@@ -8,7 +8,7 @@ pycocotools==2.0.7
 PyYAML==6.0.1
 scipy==1.13.0
 onnxslim==0.1.31
-onnxruntime-gpu==1.18.0 # Using GPU version
+onnxruntime==1.18.0 # Using CPU version for macOS
 gradio==4.44.1
 opencv-python==4.9.0.80
 psutil==5.9.8

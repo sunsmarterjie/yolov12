@@ -1,10 +1,72 @@
 # Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
+# Extended with Poultry Vision test fixtures
 
 import shutil
 from pathlib import Path
+import pytest
+import numpy as np
 
-from tests import TMP
+# Try to import TMP, fallback if not available
+try:
+    from tests import TMP
+except ImportError:
+    TMP = Path(__file__).parent / "tmp"
 
+
+# =============================================================================
+# Poultry Vision Fixtures
+# =============================================================================
+
+@pytest.fixture
+def project_root():
+    """Get project root directory."""
+    return Path(__file__).parent.parent
+
+
+@pytest.fixture
+def models_dir(project_root):
+    """Get models directory."""
+    return project_root / "models"
+
+
+@pytest.fixture
+def sample_pen_corners():
+    """4-point pen calibration fixture (pixels)."""
+    return np.array([
+        [100, 100],
+        [700, 100],
+        [700, 500],
+        [100, 500]
+    ], dtype=np.float32)
+
+
+@pytest.fixture
+def sample_bounding_box():
+    """Sample bounding box (x1, y1, x2, y2)."""
+    return (150.0, 200.0, 250.0, 300.0)
+
+
+@pytest.fixture
+def overlapping_boxes():
+    """Two overlapping bounding boxes."""
+    return ((100, 100, 200, 200), (150, 150, 250, 250))
+
+
+@pytest.fixture
+def non_overlapping_boxes():
+    """Two non-overlapping bounding boxes."""
+    return ((100, 100, 200, 200), (300, 300, 400, 400))
+
+
+@pytest.fixture
+def mock_frame():
+    """Mock video frame (1080p black image)."""
+    return np.zeros((1080, 1920, 3), dtype=np.uint8)
+
+
+# =============================================================================
+# Original Ultralytics Fixtures
+# =============================================================================
 
 def pytest_addoption(parser):
     """

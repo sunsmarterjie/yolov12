@@ -1,0 +1,61 @@
+# Model Configuration for Poultry Vision System
+
+models:
+  # Primary detection model
+  detection:
+    name: poultry-yolov12n-v1
+    path: models/poultry-yolov12n-v1.pt
+    type: yolov12n
+    classes:
+      0: feeder
+      1: hen
+      2: waterer
+    input_size: 640
+
+  # Alternative detection model
+  detection_alt:
+    name: top_low_poultry
+    path: models/top_low_poultry.pt
+    type: yolov12n
+    classes:
+      0: feeder
+      1: hen
+      2: waterer
+
+  # Pose estimation model
+  pose:
+    name: yolo11-pose
+    path: models/yolo11-pose.pt
+    type: yolo11-pose
+    keypoints: 10
+    skeleton:
+      - [0, 1]   # body_center -> body_tail
+      - [0, 2]   # body_center -> body_knee_left
+      - [0, 3]   # body_center -> body_knee_right
+      - [2, 4]   # body_knee_left -> body_heel_left
+      - [3, 5]   # body_knee_right -> body_heel_right
+      - [0, 6]   # body_center -> eye_left
+      - [0, 7]   # body_center -> eye_right
+      - [6, 8]   # eye_left -> comb
+      - [7, 8]   # eye_right -> comb
+      - [6, 9]   # eye_left -> beak
+      - [7, 9]   # eye_right -> beak
+
+  # Segmentation model
+  segmentation:
+    name: poultry-seg-large
+    path: models/poultry-seg-large.pt
+    type: yolo-seg
+
+# Inference settings
+inference:
+  backend: pytorch      # pytorch, hailo, onnx
+  confidence_threshold: 0.25
+  nms_threshold: 0.45
+  max_detections: 100
+
+# Tracker settings
+tracker:
+  type: bytetrack
+  config: config/trackers/bytetrack.yaml
+  persist: true

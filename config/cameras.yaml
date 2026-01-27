@@ -1,0 +1,37 @@
+# Camera Configuration for Poultry Vision System
+# Supports USB cameras and RTSP streams
+
+cameras:
+  # Top-down camera (primary view)
+  top:
+    name: top
+    type: usb           # usb, rtsp, or file
+    source: "0"         # Device index for USB, URL for RTSP, path for file
+    width: 1920
+    height: 1080
+    fps: 30
+    rotation: 0         # 0, 90, 180, or 270 degrees
+    buffer_size: 30
+
+  # Side-angle camera (secondary view)
+  side:
+    name: side
+    type: rtsp
+    source: "rtsp://100.68.7.57:8554/low_cam"
+    width: 1920
+    height: 1080
+    fps: 30
+    rotation: 180       # Camera mounted upside down
+    buffer_size: 30
+
+# Frame synchronization settings
+sync:
+  tolerance_ms: 50      # Maximum timestamp difference for frame matching
+  buffer_size: 30       # Ring buffer size for each camera
+  primary_camera: top   # Primary camera drives synchronization
+
+# RTSP-specific settings
+rtsp:
+  transport: tcp        # tcp or udp
+  reconnect_delay_s: 2  # Initial reconnect delay
+  max_reconnect_delay_s: 30

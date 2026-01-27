@@ -1,0 +1,55 @@
+# PoseLabeler Schema Configuration
+# Poultry/Hen Pose Estimation
+# Based on Fang et al. 2021 broiler chicken pose model
+
+name: "Poultry Pose"
+version: "1.0"
+
+classes:
+  0: hen
+
+keypoints:
+  - name: body_center
+    color: "#FF6B6B"
+  - name: body_tail
+    color: "#4ECDC4"
+  - name: body_knee_left
+    color: "#45B7D1"
+  - name: body_knee_right
+    color: "#96CEB4"
+  - name: body_heel_left
+    color: "#FFEAA7"
+  - name: body_heel_right
+    color: "#DDA0DD"
+  - name: eye_left
+    color: "#98D8C8"
+  - name: eye_right
+    color: "#F7DC6F"
+  - name: comb
+    color: "#BB8FCE"
+  - name: beak
+    color: "#F8B500"
+
+# Skeleton connections based on Fang et al. 2021
+# Connection lines express relative positional relationships between feature points
+skeleton:
+  # Body center connections (hub of the skeleton)
+  - [body_center, body_tail]
+  - [body_center, body_knee_left]
+  - [body_center, body_knee_right]
+  - [body_center, eye_left]
+  - [body_center, eye_right]
+  # Leg connections
+  - [body_knee_left, body_heel_left]
+  - [body_knee_right, body_heel_right]
+  # Head connections
+  - [eye_left, comb]
+  - [eye_left, beak]
+  - [eye_right, comb]
+  - [eye_right, beak]
+
+# Flip pairs for data augmentation (left-right symmetry)
+flip_pairs:
+  - [body_knee_left, body_knee_right]
+  - [body_heel_left, body_heel_right]
+  - [eye_left, eye_right]

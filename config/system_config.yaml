@@ -1,0 +1,55 @@
+# System Configuration for Poultry Vision
+
+# Physical pen dimensions
+pen:
+  width_cm: 120
+  height_cm: 200
+  calibration_file: pen_config.npy
+  interaction_radius_cm: 15    # Buffer for feeder/waterer zones
+
+# Coordinate transformation
+transform:
+  pixels_to_cm_scale: 0.2      # Approximate conversion factor
+
+# Visualization settings
+visualization:
+  minimap_scale: 3             # Pixels per cm for minimap
+  show_trails: true
+  trail_length: 40             # Number of position history points
+  show_skeleton: true
+  show_bounding_boxes: true
+  show_labels: true
+
+# Behavior monitoring
+behavior:
+  min_overlap_area: 0          # Minimum overlap for behavior detection
+  feeding_zone_buffer_cm: 15
+  drinking_zone_buffer_cm: 15
+
+# Web dashboard settings
+web:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  websocket_enabled: true
+
+# Logging configuration
+logging:
+  level: INFO                  # DEBUG, INFO, WARNING, ERROR
+  file: logs/poultry-pi.log
+  console: true
+  max_file_size_mb: 10
+  backup_count: 5
+
+# Data export settings
+export:
+  output_dir: output
+  save_video: false
+  save_stats_csv: true
+  stats_interval_s: 60         # How often to save statistics
+
+# Performance settings
+performance:
+  target_fps: 30
+  skip_frames: 0               # Skip every N frames (0 = no skip)
+  resize_factor: 1.0           # Downscale input frames
