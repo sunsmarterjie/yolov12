@@ -98,9 +98,9 @@ YOLOv12 surpasses all popular real-time object detectors in accuracy with compet
 
 ## Installation
 ```
-wget https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.3/flash_attn-2.7.3+cu11torch2.2cxx11abiFALSE-cp311-cp311-linux_x86_64.whl
-conda create -n yolov12 python=3.11
+conda create -n yolov12 python=3.11 supervision flash-attn
 conda activate yolov12
+git clone https://github.com/sunsmarterjie/yolov12 && cd yolov12
 pip install -r requirements.txt
 pip install -e .
 ```
