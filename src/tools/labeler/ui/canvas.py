@@ -34,33 +34,33 @@ class AnnotationCanvas(QWidget):
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        
+
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMinimumSize(400, 300)
-        
+
         # Image state
         self._pixmap: Optional[QPixmap] = None
         self._image_path: Optional[Path] = None
         self._image_size = QSize(1, 1)
-        
+
         # View state
         self._scale = 1.0
         self._offset = QPointF(0, 0)
         self._dragging_view = False
         self._drag_start = QPoint()
-        
+
         # Annotation state
         self._frame: Optional[FrameAnnotation] = None
         self._schema: Optional[Schema] = None
         self._current_instance: Optional[Instance] = None
         self._current_keypoint: Optional[str] = None
-        
+
         # Tool state
-        self._tool = "select"  # select, bbox, keypoint
+        self._tool = "select"  # select, bbox, keypoint, eraser
         self._show_skeleton = True
         self._show_bbox = True
-        
+
         # Interaction state
         self._hovered_point: Optional[tuple[str, str]] = None  # (instance_id, keypoint_name)
         self._selected_point: Optional[tuple[str, str]] = None  # (instance_id, keypoint_name) - persistent selection
@@ -68,6 +68,13 @@ class AnnotationCanvas(QWidget):
         self._drawing_bbox = False
         self._bbox_start: Optional[QPointF] = None
         self._bbox_current: Optional[QPointF] = None
+
+        # Undo stack: list of serialized FrameAnnotation dicts
+        self._undo_stack: list[dict] = []
+        self._MAX_UNDO = 50
+
+        # View rotation (degrees CW, 0/90/180/270 only)
+        self._rotation_angle: int = 0
     
     def load_image(self, path: Path) -> bool:
         """Load an image from path."""
@@ -106,6 +113,7 @@ class AnnotationCanvas(QWidget):
         self._current_instance = None
         self._current_keypoint = None
         self._selected_point = None
+        self._rotation_angle = 0
 
         self.update()
     
@@ -139,45 +147,53 @@ class AnnotationCanvas(QWidget):
         """Toggle bounding box visibility."""
         self._show_bbox = show
         self.update()
-    
+
+    # ===== Undo =====
+
+    def _push_undo(self) -> None:
+        """Snapshot current frame state onto the undo stack."""
+        if not self._frame:
+            return
+        self._undo_stack.append(self._frame.to_dict())
+        if len(self._undo_stack) > self._MAX_UNDO:
+            self._undo_stack.pop(0)
+
+    def undo(self) -> bool:
+        """Restore the previous frame state. Returns True if undo was performed."""
+        if not self._undo_stack or not self._frame:
+            return False
+        state = self._undo_stack.pop()
+        restored = FrameAnnotation.from_dict(state)
+        # Restore instances in-place so panel references stay consistent
+        self._frame.instances = restored.instances
+        # Sync current instance reference
+        if self._current_instance:
+            self._current_instance = self._frame.get_instance(self._current_instance.id)
+        self._selected_point = None
+        self._hovered_point = None
+        self.annotation_changed.emit()
+        self.update()
+        return True
+
     def delete_current_keypoint(self) -> bool:
         """Delete (reset) the currently selected keypoint. Returns True if deleted."""
         if not self._current_instance or not self._current_keypoint:
             return False
-        
+
         if self._current_keypoint in self._current_instance.keypoints:
             kp = self._current_instance.keypoints[self._current_keypoint]
             if kp.is_labeled():
+                self._push_undo()
                 kp.x = 0.0
                 kp.y = 0.0
                 kp.visibility = 0
-                self.annotation_changed.emit()
-                self.update()
-                return True
-        return False
-    
-    def delete_hovered_keypoint(self) -> bool:
-        """Delete the keypoint currently under the cursor. Returns True if deleted."""
-        if not self._hovered_point or not self._frame:
-            return False
-
-        instance_id, kp_name = self._hovered_point
-        instance = self._frame.get_instance(instance_id)
-
-        if instance and kp_name in instance.keypoints:
-            kp = instance.keypoints[kp_name]
-            if kp.is_labeled():
-                kp.x = 0.0
-                kp.y = 0.0
-                kp.visibility = 0
-                self._hovered_point = None
                 self.annotation_changed.emit()
                 self.update()
                 return True
         return False
 
     def delete_selected_keypoint(self) -> bool:
-        """Delete the explicitly selected keypoint. Returns True if deleted."""
+        """Delete the explicitly selected keypoint (clicked in select mode). Returns True if deleted."""
         if not self._selected_point or not self._frame:
             return False
 
@@ -187,9 +203,31 @@ class AnnotationCanvas(QWidget):
         if instance and kp_name in instance.keypoints:
             kp = instance.keypoints[kp_name]
             if kp.is_labeled():
+                self._push_undo()
                 kp.x = 0.0
                 kp.y = 0.0
                 kp.visibility = 0
+                self._selected_point = None
+                self.annotation_changed.emit()
+                self.update()
+                return True
+        return False
+
+    def erase_point_at(self, view_pos: QPointF) -> bool:
+        """Erase (delete) a keypoint at the given view position. Used by eraser tool."""
+        point = self._find_point_at(view_pos)
+        if not point or not self._frame:
+            return False
+        instance_id, kp_name = point
+        instance = self._frame.get_instance(instance_id)
+        if instance and kp_name in instance.keypoints:
+            kp = instance.keypoints[kp_name]
+            if kp.is_labeled():
+                self._push_undo()
+                kp.x = 0.0
+                kp.y = 0.0
+                kp.visibility = 0
+                self._hovered_point = None
                 self._selected_point = None
                 self.annotation_changed.emit()
                 self.update()
@@ -241,18 +279,47 @@ class AnnotationCanvas(QWidget):
         
         self.update()
     
+    def rotate_view(self, degrees: int) -> None:
+        """Rotate the view by degrees (positive = CW). Snaps to 90° steps."""
+        self._rotation_angle = (self._rotation_angle + degrees) % 360
+        self.update()
+
     def _image_to_view(self, point: QPointF) -> QPointF:
-        """Convert image coordinates to view coordinates."""
-        return QPointF(
-            point.x() * self._scale + self._offset.x(),
-            point.y() * self._scale + self._offset.y()
-        )
-    
+        """Convert image coordinates to view coordinates (includes rotation)."""
+        vx = point.x() * self._scale + self._offset.x()
+        vy = point.y() * self._scale + self._offset.y()
+        if self._rotation_angle != 0:
+            cx = self._image_size.width() * self._scale / 2 + self._offset.x()
+            cy = self._image_size.height() * self._scale / 2 + self._offset.y()
+            vx -= cx
+            vy -= cy
+            angle = math.radians(self._rotation_angle)
+            vx, vy = (
+                vx * math.cos(angle) - vy * math.sin(angle),
+                vx * math.sin(angle) + vy * math.cos(angle),
+            )
+            vx += cx
+            vy += cy
+        return QPointF(vx, vy)
+
     def _view_to_image(self, point: QPointF) -> QPointF:
-        """Convert view coordinates to image coordinates."""
+        """Convert view coordinates to image coordinates (includes inverse rotation)."""
+        px, py = point.x(), point.y()
+        if self._rotation_angle != 0:
+            cx = self._image_size.width() * self._scale / 2 + self._offset.x()
+            cy = self._image_size.height() * self._scale / 2 + self._offset.y()
+            px -= cx
+            py -= cy
+            angle = math.radians(-self._rotation_angle)
+            px, py = (
+                px * math.cos(angle) - py * math.sin(angle),
+                px * math.sin(angle) + py * math.cos(angle),
+            )
+            px += cx
+            py += cy
         return QPointF(
-            (point.x() - self._offset.x()) / self._scale,
-            (point.y() - self._offset.y()) / self._scale
+            (px - self._offset.x()) / self._scale,
+            (py - self._offset.y()) / self._scale,
         )
     
     def _image_to_normalized(self, point: QPointF) -> tuple[float, float]:
@@ -275,6 +342,8 @@ class AnnotationCanvas(QWidget):
             self.setCursor(Qt.CursorShape.CrossCursor)
         elif self._tool == "keypoint":
             self.setCursor(Qt.CursorShape.CrossCursor)
+        elif self._tool == "eraser":
+            self.setCursor(Qt.CursorShape.ForbiddenCursor)
         elif self._hovered_point:
             self.setCursor(Qt.CursorShape.PointingHandCursor)
         else:
@@ -312,14 +381,16 @@ class AnnotationCanvas(QWidget):
         """Place or move a keypoint at the given position."""
         if not self._current_instance or not self._current_keypoint:
             return
-        
+
+        self._push_undo()
+
         image_pos = self._view_to_image(view_pos)
         norm_x, norm_y = self._image_to_normalized(image_pos)
-        
+
         # Clamp to image bounds
         norm_x = max(0, min(1, norm_x))
         norm_y = max(0, min(1, norm_y))
-        
+
         # Create or update keypoint
         if self._current_keypoint not in self._current_instance.keypoints:
             self._current_instance.keypoints[self._current_keypoint] = Keypoint(
@@ -334,7 +405,7 @@ class AnnotationCanvas(QWidget):
             kp.y = norm_y
             if kp.visibility == 0:
                 kp.visibility = 2
-        
+
         self.annotation_changed.emit()
         self.keypoint_placed.emit(self._current_keypoint)
         self.update()
@@ -358,32 +429,33 @@ class AnnotationCanvas(QWidget):
         """Finish drawing bounding box."""
         if not self._drawing_bbox or not self._current_instance:
             return
-        
+
         if self._bbox_start and self._bbox_current:
             # Convert to normalized coordinates
             start_image = self._view_to_image(self._bbox_start)
             end_image = self._view_to_image(self._bbox_current)
-            
+
             x1, y1 = self._image_to_normalized(start_image)
             x2, y2 = self._image_to_normalized(end_image)
-            
+
             # Ensure valid bbox
             x1, x2 = min(x1, x2), max(x1, x2)
             y1, y2 = min(y1, y2), max(y1, y2)
-            
+
             # Clamp to bounds
             x1 = max(0, min(1, x1))
             x2 = max(0, min(1, x2))
             y1 = max(0, min(1, y1))
             y2 = max(0, min(1, y2))
-            
+
             # Check minimum size
             if x2 - x1 > 0.01 and y2 - y1 > 0.01:
+                self._push_undo()
                 from core import BoundingBox
                 self._current_instance.bbox = BoundingBox.from_corners(x1, y1, x2, y2)
                 self.annotation_changed.emit()
                 self.bbox_drawn.emit()
-        
+
         self._drawing_bbox = False
         self._bbox_start = None
         self._bbox_current = None
@@ -404,8 +476,14 @@ class AnnotationCanvas(QWidget):
             painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "No image loaded")
             return
         
-        # Draw image
+        # Draw image (with optional rotation around image center)
         painter.save()
+        if self._rotation_angle != 0:
+            cx = self._image_size.width() * self._scale / 2 + self._offset.x()
+            cy = self._image_size.height() * self._scale / 2 + self._offset.y()
+            painter.translate(cx, cy)
+            painter.rotate(self._rotation_angle)
+            painter.translate(-cx, -cy)
         painter.translate(self._offset)
         painter.scale(self._scale, self._scale)
         painter.drawPixmap(0, 0, self._pixmap)
@@ -620,7 +698,7 @@ class AnnotationCanvas(QWidget):
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
             return
         
-        # Right click: toggle visibility
+        # Right click: cycle visibility (visible → occluded → unlabeled)
         if event.button() == Qt.MouseButton.RightButton:
             point = self._find_point_at(pos)
             if point:
@@ -629,10 +707,13 @@ class AnnotationCanvas(QWidget):
                     instance = self._frame.get_instance(instance_id)
                     if instance and kp_name in instance.keypoints:
                         kp = instance.keypoints[kp_name]
-                        # Cycle visibility: 2 -> 1 -> 0 -> 2
+                        self._push_undo()
+                        # Cycle: visible(2) → occluded(1) → unlabeled(0) → visible(2)
                         kp.visibility = (kp.visibility - 1) % 3
                         if kp.visibility == 0:
-                            kp.visibility = 2  # Skip 0, go back to 2
+                            # Unlabeled: clear coordinates so point disappears
+                            kp.x = 0.0
+                            kp.y = 0.0
                         self.annotation_changed.emit()
                         self.update()
             return
@@ -643,6 +724,7 @@ class AnnotationCanvas(QWidget):
                 # Check for point dragging
                 point = self._find_point_at(pos)
                 if point:
+                    self._push_undo()  # Capture state before drag begins
                     self._dragging_point = point
                     self._selected_point = point  # Set persistent selection
                     instance_id, kp_name = point
@@ -664,9 +746,12 @@ class AnnotationCanvas(QWidget):
             
             elif self._tool == "bbox":
                 self._start_bbox(pos)
-            
+
             elif self._tool == "keypoint":
                 self._place_keypoint(pos)
+
+            elif self._tool == "eraser":
+                self.erase_point_at(pos)
     
     def mouseMoveEvent(self, event: QMouseEvent):
         """Handle mouse move."""

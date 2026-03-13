@@ -16,7 +16,7 @@ from PyQt6.QtGui import QAction, QKeySequence, QIcon
 from core import Project, ProjectManager, Schema, create_poultry_schema, get_builtin_schema
 from .canvas import AnnotationCanvas
 from .panels import InstancePanel, KeypointPanel, NavigationPanel
-from .dialogs import NewProjectDialog, ExportDialog, SchemaEditorDialog
+from .dialogs import NewProjectDialog, ExportDialog, SchemaEditorDialog, TutorialDialog
 
 
 class MainWindow(QMainWindow):
@@ -38,6 +38,10 @@ class MainWindow(QMainWindow):
         self._load_settings()
         self._update_title()
         self._update_ui_state()
+
+        # Show tutorial on first launch
+        if not self.settings.value("tutorial_shown", False, type=bool):
+            QTimer.singleShot(500, self._show_tutorial)
     
     def _setup_ui(self):
         """Setup the main UI layout."""
@@ -103,6 +107,7 @@ class MainWindow(QMainWindow):
         
         # Navigation panel signals
         self.navigation_panel.frame_changed.connect(self._on_frame_changed)
+        self.navigation_panel.rotate_requested.connect(self.canvas.rotate_view)
         
         # Canvas signals
         self.canvas.annotation_changed.connect(self._on_annotation_changed)
@@ -148,7 +153,14 @@ class MainWindow(QMainWindow):
         
         # Edit menu
         edit_menu = menubar.addMenu("&Edit")
-        
+
+        self.action_undo = QAction("&Undo", self)
+        self.action_undo.setShortcut(QKeySequence.StandardKey.Undo)
+        self.action_undo.triggered.connect(self._undo)
+        edit_menu.addAction(self.action_undo)
+
+        edit_menu.addSeparator()
+
         self.action_edit_schema = QAction("Edit &Schema...", self)
         self.action_edit_schema.triggered.connect(self._edit_schema)
         edit_menu.addAction(self.action_edit_schema)
@@ -187,11 +199,16 @@ class MainWindow(QMainWindow):
         
         # Help menu
         help_menu = menubar.addMenu("&Help")
-        
+
+        self.action_tutorial = QAction("&Tutorial (F1)", self)
+        self.action_tutorial.setShortcut(QKeySequence("F1"))
+        self.action_tutorial.triggered.connect(self._show_tutorial)
+        help_menu.addAction(self.action_tutorial)
+
         self.action_shortcuts = QAction("Keyboard &Shortcuts", self)
         self.action_shortcuts.triggered.connect(self._show_shortcuts)
         help_menu.addAction(self.action_shortcuts)
-        
+
         self.action_about = QAction("&About", self)
         self.action_about.triggered.connect(self._show_about)
         help_menu.addAction(self.action_about)
@@ -218,9 +235,14 @@ class MainWindow(QMainWindow):
         self.action_tool_keypoint.setCheckable(True)
         self.action_tool_keypoint.triggered.connect(lambda: self._set_tool("keypoint"))
         toolbar.addAction(self.action_tool_keypoint)
-        
+
+        self.action_tool_eraser = QAction("Eraser (E)", self)
+        self.action_tool_eraser.setCheckable(True)
+        self.action_tool_eraser.triggered.connect(lambda: self._set_tool("eraser"))
+        toolbar.addAction(self.action_tool_eraser)
+
         toolbar.addSeparator()
-        
+
         # Navigation
         self.action_prev_frame = QAction("← Prev (A)", self)
         self.action_prev_frame.triggered.connect(self._prev_frame)
@@ -291,12 +313,34 @@ class MainWindow(QMainWindow):
         self.shortcut_new_instance.triggered.connect(self._add_instance)
         self.addAction(self.shortcut_new_instance)
         
-        # Delete
+        # Tools continued
+        self.shortcut_eraser = QAction(self)
+        self.shortcut_eraser.setShortcut(QKeySequence("E"))
+        self.shortcut_eraser.triggered.connect(lambda: self._set_tool("eraser"))
+        self.addAction(self.shortcut_eraser)
+
+        # Rotation
+        self.shortcut_rotate_cw = QAction(self)
+        self.shortcut_rotate_cw.setShortcut(QKeySequence("R"))
+        self.shortcut_rotate_cw.triggered.connect(lambda: self.canvas.rotate_view(90))
+        self.addAction(self.shortcut_rotate_cw)
+
+        self.shortcut_rotate_ccw = QAction(self)
+        self.shortcut_rotate_ccw.setShortcut(QKeySequence("Shift+R"))
+        self.shortcut_rotate_ccw.triggered.connect(lambda: self.canvas.rotate_view(-90))
+        self.addAction(self.shortcut_rotate_ccw)
+
+        # Delete / Backspace
         self.shortcut_delete = QAction(self)
         self.shortcut_delete.setShortcut(QKeySequence.StandardKey.Delete)
         self.shortcut_delete.triggered.connect(self._delete_selected)
         self.addAction(self.shortcut_delete)
-        
+
+        self.shortcut_backspace = QAction(self)
+        self.shortcut_backspace.setShortcut(QKeySequence(Qt.Key.Key_Backspace))
+        self.shortcut_backspace.triggered.connect(self._delete_selected)
+        self.addAction(self.shortcut_backspace)
+
         # Keypoint number shortcuts (1-0 for first 10 keypoints)
         for i in range(10):
             action = QAction(self)
@@ -492,7 +536,8 @@ class MainWindow(QMainWindow):
         self.action_tool_select.setChecked(tool == "select")
         self.action_tool_bbox.setChecked(tool == "bbox")
         self.action_tool_keypoint.setChecked(tool == "keypoint")
-        
+        self.action_tool_eraser.setChecked(tool == "eraser")
+
         self.canvas.set_tool(tool)
     
     def _toggle_skeleton(self, checked: bool):
@@ -529,27 +574,34 @@ class MainWindow(QMainWindow):
         
         self.instance_panel.add_instance()
     
+    def _undo(self):
+        """Undo last annotation action."""
+        if self.canvas.undo():
+            self.keypoint_panel.refresh()
+            self.instance_panel.refresh()
+            self.statusbar.showMessage("Undo", 1500)
+
     def _delete_selected(self):
-        """Delete selected keypoint or instance."""
-        # First try to delete explicitly selected keypoint (clicked on canvas)
+        """Delete selected keypoint or instance.
+
+        Priority:
+        1. Explicitly selected keypoint (clicked in select mode on canvas)
+        2. Current keypoint active in keypoint panel
+        3. Selected instance in instance panel
+        """
+        # 1. Explicitly selected (clicked) keypoint on canvas
         if self.canvas.delete_selected_keypoint():
             self.keypoint_panel.refresh()
             self.instance_panel.refresh()
             return
 
-        # Then try to delete hovered keypoint
-        if self.canvas.delete_hovered_keypoint():
-            self.keypoint_panel.refresh()
-            self.instance_panel.refresh()
-            return
-
-        # Then try to delete current keypoint (selected in panel)
+        # 2. Current keypoint being edited (selected in keypoint panel)
         if self.canvas.delete_current_keypoint():
             self.keypoint_panel.refresh()
             self.instance_panel.refresh()
             return
 
-        # Finally, delete selected instance
+        # 3. Delete the selected instance
         self.instance_panel.delete_selected()
     
     def _select_keypoint_by_index(self, index: int):
@@ -565,20 +617,27 @@ class MainWindow(QMainWindow):
 <tr><td>A</td><td>Previous frame</td></tr>
 <tr><td>D</td><td>Next frame</td></tr>
 <tr><td><b>Tools</b></td><td></td></tr>
-<tr><td>V</td><td>Select tool</td></tr>
+<tr><td>V</td><td>Select tool (drag keypoints)</td></tr>
 <tr><td>B</td><td>Bounding box tool</td></tr>
-<tr><td>K</td><td>Keypoint tool</td></tr>
+<tr><td>K</td><td>Keypoint placement tool</td></tr>
+<tr><td>E</td><td>Eraser tool (click point to delete)</td></tr>
+<tr><td>R</td><td>Rotate view 90° clockwise</td></tr>
+<tr><td>Shift+R</td><td>Rotate view 90° counter-clockwise</td></tr>
 <tr><td><b>Annotation</b></td><td></td></tr>
 <tr><td>N</td><td>New instance (hen)</td></tr>
 <tr><td>1-0</td><td>Select keypoint 1-10</td></tr>
-<tr><td>Delete</td><td>Delete selected</td></tr>
+<tr><td>Delete / Backspace</td><td>Delete selected keypoint or instance</td></tr>
+<tr><td>Ctrl+Z</td><td>Undo last action</td></tr>
+<tr><td>Right-click point</td><td>Cycle: visible → occluded → unlabeled</td></tr>
 <tr><td><b>View</b></td><td></td></tr>
 <tr><td>Ctrl+=</td><td>Zoom in</td></tr>
 <tr><td>Ctrl+-</td><td>Zoom out</td></tr>
 <tr><td>Ctrl+0</td><td>Fit to window</td></tr>
 <tr><td><b>File</b></td><td></td></tr>
 <tr><td>Ctrl+S</td><td>Save</td></tr>
-<tr><td>Ctrl+E</td><td>Export</td></tr>
+<tr><td>Ctrl+E</td><td>Export to YOLO</td></tr>
+<tr><td><b>Help</b></td><td></td></tr>
+<tr><td>F1</td><td>Show tutorial</td></tr>
 </table>
         """
         QMessageBox.information(self, "Keyboard Shortcuts", shortcuts)
@@ -594,7 +653,13 @@ class MainWindow(QMainWindow):
             "<hr>"
             "<p>Built for the Poultry Vision project.</p>"
         )
-    
+
+    def _show_tutorial(self):
+        """Show the tutorial dialog."""
+        dialog = TutorialDialog(self)
+        dialog.exec()
+        self.settings.setValue("tutorial_shown", True)
+
     # ===== Signal Handlers =====
     
     def _on_instance_selected(self, instance_id: str):

@@ -10,10 +10,11 @@ from PyQt6.QtWidgets import (
     QLineEdit, QPushButton, QLabel, QFileDialog, QComboBox,
     QSpinBox, QDoubleSpinBox, QListWidget, QListWidgetItem,
     QTableWidget, QTableWidgetItem, QHeaderView, QMessageBox,
-    QDialogButtonBox, QColorDialog, QCheckBox
+    QDialogButtonBox, QColorDialog, QCheckBox, QScrollArea, QWidget,
+    QStackedWidget, QSizePolicy, QFrame
 )
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor
+from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtGui import QColor, QFont, QPixmap, QPainter, QPen, QBrush
 
 from core import Schema, KeypointDef, create_poultry_schema, list_builtin_schemas, get_builtin_schema
 
@@ -504,3 +505,178 @@ class SchemaEditorDialog(QDialog):
     
     def get_schema(self) -> Schema:
         return self._schema
+
+
+class TutorialDialog(QDialog):
+    """Step-by-step tutorial dialog for new users."""
+
+    STEPS = [
+        {
+            "title": "Welcome to PoseLabeler",
+            "content": (
+                "<h2>Welcome to PoseLabeler!</h2>"
+                "<p>This tool lets you annotate poultry images with <b>bounding boxes</b> "
+                "and <b>keypoints</b> to create pose estimation datasets.</p>"
+                "<p><b>Layout:</b></p>"
+                "<ul>"
+                "<li><b>Left panel</b> — Instance list (your hens)</li>"
+                "<li><b>Center</b> — Image canvas (click here to annotate)</li>"
+                "<li><b>Right panel</b> — Keypoint list and frame navigation</li>"
+                "<li><b>Toolbar</b> — Tool selection and quick actions</li>"
+                "</ul>"
+                "<p>Click <b>Next</b> to learn the labeling workflow.</p>"
+            ),
+        },
+        {
+            "title": "Step 1 — Add a Hen",
+            "content": (
+                "<h2>Step 1: Add a Hen</h2>"
+                "<p>Press <b>N</b> or click <b>\"+ Add Hen (N)\"</b> in the toolbar.</p>"
+                "<p>A new hen entry appears in the left panel and is automatically selected.</p>"
+                "<p><b>Tips:</b></p>"
+                "<ul>"
+                "<li>You can add multiple hens per image</li>"
+                "<li>Click a hen in the left panel to select it</li>"
+                "<li>Toggle the eye icon to show/hide a hen's annotations</li>"
+                "</ul>"
+            ),
+        },
+        {
+            "title": "Step 2 — Draw Bounding Box",
+            "content": (
+                "<h2>Step 2: Draw a Bounding Box</h2>"
+                "<p>After adding a hen, the tool automatically switches to <b>Draw Box (B)</b>.</p>"
+                "<p><b>Click and drag</b> on the canvas to draw a rectangle around the hen.</p>"
+                "<p>Release the mouse to confirm the box.</p>"
+                "<p><b>Tips:</b></p>"
+                "<ul>"
+                "<li>Press <b>B</b> at any time to switch to the bbox tool</li>"
+                "<li>After drawing, the tool automatically switches to keypoint mode</li>"
+                "<li>Use <b>Ctrl+Z</b> to undo if you drew the wrong box</li>"
+                "</ul>"
+            ),
+        },
+        {
+            "title": "Step 3 — Place Keypoints",
+            "content": (
+                "<h2>Step 3: Place Keypoints</h2>"
+                "<p>After the bbox, the tool switches to <b>Place Point (K)</b> and selects "
+                "the first keypoint automatically.</p>"
+                "<p><b>Click on the image</b> to place each keypoint at the correct body part location.</p>"
+                "<p>After placing a point, the next keypoint is automatically selected.</p>"
+                "<p><b>Tips:</b></p>"
+                "<ul>"
+                "<li>Press <b>1–0</b> to jump to a specific keypoint</li>"
+                "<li>Press <b>K</b> to manually switch to keypoint mode</li>"
+                "<li>Press <b>V</b> then click a point to drag and reposition it</li>"
+                "<li>Use <b>Ctrl+Z</b> to undo a misplaced point</li>"
+                "</ul>"
+            ),
+        },
+        {
+            "title": "Step 4 — Fix Mistakes",
+            "content": (
+                "<h2>Step 4: Fixing Mistakes</h2>"
+                "<p>Made an error? Here are your options:</p>"
+                "<p><b>Eraser Tool (E)</b> — Press E to activate. "
+                "Click any placed keypoint to delete it. The cursor becomes a red circle.</p>"
+                "<p><b>Delete / Backspace</b> — Select a keypoint first (press V, click the point), "
+                "then press Delete or Backspace to remove it.</p>"
+                "<p><b>Ctrl+Z</b> — Undo the last action (supports up to 50 steps).</p>"
+                "<p><b>Right-click a keypoint</b> — Cycles between: "
+                "<i>visible</i> → <i>occluded</i> → <i>unlabeled</i>.</p>"
+            ),
+        },
+        {
+            "title": "Step 5 — Navigate & Save",
+            "content": (
+                "<h2>Step 5: Navigate Frames &amp; Save</h2>"
+                "<p><b>A / D</b> — Move to previous / next frame.</p>"
+                "<p><b>Ctrl+S</b> — Save your project at any time.</p>"
+                "<p><b>Ctrl+E</b> — Export annotations to YOLO pose format.</p>"
+                "<p>The status bar at the bottom shows your annotation progress.</p>"
+                "<p><b>The project autosaves every 30 seconds.</b></p>"
+                "<hr>"
+                "<p>You're ready to start labeling! Press <b>Close</b> to begin.</p>"
+                "<p><i>You can reopen this tutorial at any time from Help → Tutorial (F1).</i></p>"
+            ),
+        },
+    ]
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("PoseLabeler Tutorial")
+        self.setMinimumSize(560, 420)
+        self.setMaximumWidth(700)
+
+        self._current_step = 0
+        self._setup_ui()
+        self._update_step()
+
+    def _setup_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setSpacing(12)
+
+        # Step indicator
+        self._step_label = QLabel()
+        self._step_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        font = QFont()
+        font.setPointSize(9)
+        self._step_label.setFont(font)
+        self._step_label.setStyleSheet("color: #888;")
+        layout.addWidget(self._step_label)
+
+        # Content area (stacked pages)
+        self._stack = QStackedWidget()
+        for step in self.STEPS:
+            page = QLabel(step["content"])
+            page.setWordWrap(True)
+            page.setTextFormat(Qt.TextFormat.RichText)
+            page.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+            page.setContentsMargins(16, 8, 16, 8)
+            scroll = QScrollArea()
+            scroll.setWidgetResizable(True)
+            scroll.setWidget(page)
+            scroll.setFrameShape(QFrame.Shape.NoFrame)
+            self._stack.addWidget(scroll)
+        layout.addWidget(self._stack, stretch=1)
+
+        # Navigation buttons
+        btn_row = QHBoxLayout()
+        self._btn_prev = QPushButton("← Back")
+        self._btn_prev.clicked.connect(self._prev_step)
+        btn_row.addWidget(self._btn_prev)
+
+        btn_row.addStretch()
+
+        self._btn_next = QPushButton("Next →")
+        self._btn_next.setDefault(True)
+        self._btn_next.clicked.connect(self._next_step)
+        btn_row.addWidget(self._btn_next)
+
+        self._btn_close = QPushButton("Close")
+        self._btn_close.clicked.connect(self.accept)
+        btn_row.addWidget(self._btn_close)
+
+        layout.addLayout(btn_row)
+
+    def _update_step(self):
+        total = len(self.STEPS)
+        self._stack.setCurrentIndex(self._current_step)
+        self._step_label.setText(
+            f"Step {self._current_step + 1} of {total}  —  {self.STEPS[self._current_step]['title']}"
+        )
+        self._btn_prev.setEnabled(self._current_step > 0)
+        is_last = self._current_step == total - 1
+        self._btn_next.setVisible(not is_last)
+        self._btn_close.setText("Close" if is_last else "Skip Tutorial")
+
+    def _next_step(self):
+        if self._current_step < len(self.STEPS) - 1:
+            self._current_step += 1
+            self._update_step()
+
+    def _prev_step(self):
+        if self._current_step > 0:
+            self._current_step -= 1
+            self._update_step()

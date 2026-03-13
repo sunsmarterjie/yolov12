@@ -153,40 +153,43 @@ class Schema:
 
 
 def create_poultry_schema() -> Schema:
-    """Create the default poultry/hen pose schema based on your DeepLabCut config."""
+    """Hen pose schema — 10 keypoints covering head, spine, and legs."""
     return Schema(
         name="Poultry Pose",
         version="1.0",
         classes={0: "hen"},
         keypoints=[
-            KeypointDef(name="body_center", color="#FF6B6B", index=0),
-            KeypointDef(name="body_tail", color="#4ECDC4", index=1),
-            KeypointDef(name="body_knee_left", color="#45B7D1", index=2),
-            KeypointDef(name="body_knee_right", color="#96CEB4", index=3),
-            KeypointDef(name="body_heel_left", color="#FFEAA7", index=4),
-            KeypointDef(name="body_heel_right", color="#DDA0DD", index=5),
-            KeypointDef(name="eye_left", color="#98D8C8", index=6),
-            KeypointDef(name="eye_right", color="#F7DC6F", index=7),
-            KeypointDef(name="comb", color="#BB8FCE", index=8),
-            KeypointDef(name="beak", color="#F8B500", index=9),
+            # Index 0–1: tail
+            KeypointDef(name="tail_base", color="#4895EF", index=0),   # blue
+            KeypointDef(name="tail_tip",  color="#ADE8F4", index=1),   # light cyan
+            # Index 2–5: legs (left = warm, right = cool)
+            KeypointDef(name="left_hock",  color="#FF9F1C", index=2),  # amber
+            KeypointDef(name="right_hock", color="#9B5DE5", index=3),  # violet
+            KeypointDef(name="left_foot",  color="#FFBF69", index=4),  # light amber
+            KeypointDef(name="right_foot", color="#C77DFF", index=5),  # light violet
+            # Index 6–7: back / neck
+            KeypointDef(name="neck_back",   color="#E9C46A", index=6), # golden yellow
+            KeypointDef(name="middle_back", color="#52B788", index=7), # sage green
+            # Index 8–9: head
+            KeypointDef(name="comb", color="#F4A261", index=8),        # warm orange
+            KeypointDef(name="beak", color="#E63946", index=9),        # crimson red
         ],
         skeleton=[
-            ("body_center", "body_tail"),
-            ("body_center", "body_knee_left"),
-            ("body_center", "body_knee_right"),
-            ("body_center", "eye_left"),
-            ("body_center", "eye_right"),
-            ("body_knee_left", "body_heel_left"),
-            ("body_knee_right", "body_heel_right"),
-            ("eye_left", "comb"),
-            ("eye_left", "beak"),
-            ("eye_right", "comb"),
-            ("eye_right", "beak"),
+            ("beak", "comb"),
+            ("beak", "neck_back"),
+            ("neck_back", "middle_back"),
+            ("middle_back", "tail_base"),
+            ("tail_base", "tail_tip"),
+            ("tail_base", "left_hock"),
+            ("tail_base", "right_hock"),
+            ("middle_back", "left_hock"),
+            ("middle_back", "right_hock"),
+            ("left_hock", "left_foot"),
+            ("right_hock", "right_foot"),
         ],
         flip_pairs=[
-            ("body_knee_left", "body_knee_right"),
-            ("body_heel_left", "body_heel_right"),
-            ("eye_left", "eye_right"),
+            ("left_hock", "right_hock"),
+            ("left_foot", "right_foot"),
         ]
     )
 

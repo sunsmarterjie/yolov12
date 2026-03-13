@@ -407,8 +407,9 @@ class KeypointPanel(QWidget):
 
 class NavigationPanel(QWidget):
     """Panel for frame navigation."""
-    
-    frame_changed = pyqtSignal(int)  # frame_index
+
+    frame_changed = pyqtSignal(int)   # frame_index
+    rotate_requested = pyqtSignal(int)  # degrees (+90 CW, -90 CCW)
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -422,9 +423,32 @@ class NavigationPanel(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(4)
         
-        # Header
-        header = QLabel("<b>Navigation</b>")
-        layout.addWidget(header)
+        # Header row: label + rotate buttons
+        header_row = QHBoxLayout()
+        header_row.addWidget(QLabel("<b>Navigation</b>"))
+        header_row.addStretch()
+
+        self.btn_rotate_ccw = QPushButton("↺")
+        self.btn_rotate_ccw.setFixedSize(28, 28)
+        self.btn_rotate_ccw.setToolTip("Rotate view 90° counter-clockwise (Shift+R)")
+        self.btn_rotate_ccw.setStyleSheet(
+            "QPushButton { font-size: 16px; border: 1px solid #555; border-radius: 4px; }"
+            "QPushButton:hover { background: #3a3a3a; }"
+        )
+        self.btn_rotate_ccw.clicked.connect(lambda: self.rotate_requested.emit(-90))
+        header_row.addWidget(self.btn_rotate_ccw)
+
+        self.btn_rotate_cw = QPushButton("↻")
+        self.btn_rotate_cw.setFixedSize(28, 28)
+        self.btn_rotate_cw.setToolTip("Rotate view 90° clockwise (R)")
+        self.btn_rotate_cw.setStyleSheet(
+            "QPushButton { font-size: 16px; border: 1px solid #555; border-radius: 4px; }"
+            "QPushButton:hover { background: #3a3a3a; }"
+        )
+        self.btn_rotate_cw.clicked.connect(lambda: self.rotate_requested.emit(90))
+        header_row.addWidget(self.btn_rotate_cw)
+
+        layout.addLayout(header_row)
         
         # Frame slider
         slider_layout = QHBoxLayout()
