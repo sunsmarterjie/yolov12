@@ -15,3 +15,8 @@ models/*.pt
 # Large video files
 samplevideos/*.mp4
 samplevideos/*.avi
+
+.vscode/ 
+seed.json
+pose-one.poselabel
+pose-minimal.poselabel
