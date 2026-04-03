@@ -1205,13 +1205,13 @@ class AAttn(nn.Module):
 
         self.num_heads = num_heads
         self.head_dim = head_dim = dim // num_heads
-        all_head_dim = head_dim * self.num_heads
+        self.all_head_dim = all_head_dim = head_dim * self.num_heads
 
         self.qk = Conv(dim, all_head_dim * 2, 1, act=False)
         self.v = Conv(dim, all_head_dim, 1, act=False)
         self.proj = Conv(all_head_dim, dim, 1, act=False)
 
-        self.pe = Conv(all_head_dim, dim, 5, 1, 2, g=dim, act=False)
+        self.pe = Conv(all_head_dim, all_head_dim, 5, 1, 2, g=all_head_dim, act=False)
 
 
     def forward(self, x):
@@ -1225,10 +1225,10 @@ class AAttn(nn.Module):
         v = v.flatten(2).transpose(1, 2)
 
         if self.area > 1:
-            qk = qk.reshape(B * self.area, N // self.area, C * 2)
-            v = v.reshape(B * self.area, N // self.area, C)
+            qk = qk.reshape(B * self.area, N // self.area, self.all_head_dim * 2)
+            v = v.reshape(B * self.area, N // self.area, self.all_head_dim)
             B, N, _ = qk.shape
-        q, k = qk.split([C, C], dim=2)
+        q, k = qk.split([self.all_head_dim, self.all_head_dim], dim=2)
 
         if x.is_cuda and USE_FLASH_ATTN:
             q = q.view(B, N, self.num_heads, self.head_dim)
@@ -1254,9 +1254,9 @@ class AAttn(nn.Module):
             x = x.permute(0, 3, 1, 2)
 
         if self.area > 1:
-            x = x.reshape(B // self.area, N * self.area, C)
+            x = x.reshape(B // self.area, N * self.area, self.all_head_dim)
             B, N, _ = x.shape
-        x = x.reshape(B, H, W, C).permute(0, 3, 1, 2)
+        x = x.reshape(B, H, W, self.all_head_dim).permute(0, 3, 1, 2)
 
         return self.proj(x + pp)
     
