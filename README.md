@@ -1,5 +1,3 @@
-
-
 <div align="center">
   <h1>
     <a href="https://proceedings.neurips.cc/paper_files/paper/2025/file/7103444259031cc58051f8c9a4868533-Paper-Conference.pdf">
@@ -9,17 +7,21 @@
   <h3>YOLOv12: Attention-Centric Real-Time Object Detectors</h3>
 </div>
 
-[Yunjie Tian](https://sunsmarterjie.github.io/)<sup>1</sup>, [Qixiang Ye](https://people.ucas.ac.cn/~qxye?language=en)<sup>2</sup>, [David Doermann](https://cse.buffalo.edu/~doermann/)<sup>1</sup>
+<p align="center">
+  <a href="https://sunsmarterjie.github.io/">Yunjie Tian</a><sup>1</sup>,
+  <a href="https://people.ucas.ac.cn/~qxye?language=en">Qixiang Ye</a><sup>2</sup>,
+  <a href="https://cse.buffalo.edu/~doermann/">David Doermann</a><sup>1</sup>
+</p>
 
-<sup>1</sup>  University at Buffalo, SUNY, <sup>2</sup> University of Chinese Academy of Sciences.
+<p align="center">
+  <sup>1</sup> University at Buffalo, SUNY, <sup>2</sup> University of Chinese Academy of Sciences.
+</p>
 
 
 <p align="center">
   <img src="assets/tradeoff_turbo.svg" width=90%> <br>
   Comparison with popular methods in terms of latency-accuracy (left) and FLOPs-accuracy (right) trade-offs
 </p>
-
-</div>
 
 [![arXiv](https://img.shields.io/badge/arXiv-2502.12524-b31b1b.svg)](https://arxiv.org/abs/2502.12524) [![Hugging Face Demo](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/sunsmarterjieleaf/yolov12) <a href="https://colab.research.google.com/github/roboflow-ai/notebooks/blob/main/notebooks/train-yolov12-object-detection-model.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a> [![Kaggle Notebook](https://img.shields.io/badge/Kaggle-Notebook-blue?logo=kaggle)](https://www.kaggle.com/code/jxxn03x/yolov12-on-custom-data) [![LightlyTrain Notebook](https://img.shields.io/badge/LightlyTrain-Notebook-blue?)](https://colab.research.google.com/github/lightly-ai/lightly-train/blob/main/examples/notebooks/yolov12.ipynb) [![deploy](https://media.roboflow.com/deploy.svg)](https://blog.roboflow.com/use-yolov12-with-roboflow/#deploy-yolov12-models-with-roboflow) [![Openbayes](https://img.shields.io/static/v1?label=Demo&message=OpenBayes%E8%B4%9D%E5%BC%8F%E8%AE%A1%E7%AE%97&color=green)](https://openbayes.com/console/public/tutorials/A4ac4xNrUCQ) 
 
