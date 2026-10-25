@@ -186,11 +186,13 @@ The code is based on [ultralytics](https://github.com/ultralytics/ultralytics). 
 ## Citation
 
 ```BibTeX
-@article{tian2025yolov12,
-  title={YOLOv12: Attention-Centric Real-Time Object Detectors},
+@article{tian2026yolov12,
+  title={Yolov12: Attention-centric real-time object detectors},
   author={Tian, Yunjie and Ye, Qixiang and Doermann, David},
-  journal={arXiv preprint arXiv:2502.12524},
-  year={2025}
+  journal={Advances in neural information processing systems},
+  volume={38},
+  pages={78433--78457},
+  year={2026}
 }
 ```
 
